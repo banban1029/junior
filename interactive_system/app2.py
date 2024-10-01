@@ -3,7 +3,6 @@ import json
 import os
 import inspect
 
-
 app = Flask(__name__)
 
 @app.route('/', methods=['POST'])
@@ -12,21 +11,27 @@ def index():
     # Google Assistantが音声入力をキャッチしたメッセージを取得し、input変数に代入
     input = request.json["queryResult"]["parameters"]["any"]
     printV('Received: ' + input)
+    
+    # 認識可能なアクティビティを辞書として定義
+    activities = {
+        "場所": "場所ですね",
+        "予算": "予算ですね",
+        "予約可能日時": "予約可能日時ですね"
+    }
 
-    if input == 'バイバイ':  # 会話を終了するメッセージ「バイバイ」を受け取った場合
-        message = 'さようなら'
-        continueFlag = False
-    else:  # 通常のメッセージを受け取った場合
-        message = input + 'と言いましたね'
-        continueFlag = True
-
+    # 入力されたアクティビティが辞書に存在するかを確認
+    if input in activities:
+        # 辞書に一致するアクティビティがあれば、対応するメッセージを返す
+        message = activities[input]
+    else:
+        # 一致するアクティビティがなければ、エラーメッセージを返す
+        message = "そのサービスはありません"
+    
     # Dialogflow(Firebase)へのWebhookレスポンス作成
-    response = makeResponse(message, continueFlag)
-    # Webhookレスポンス送信
+    response = makeResponse(message, continueFlag= False) # 会話は1ターンのみのやりとりなのでFalse
     return json.dumps(response)
 
 # Webhookレスポンスの作成(JSON形式)
-# message: Google Homeの発話内容, continueFlag: 会話を続けるかどうかのフラグ（続ける: Yes, 終了: No）
 def makeResponse(message, continueFlag=True):
     response = {
         "payload": {
