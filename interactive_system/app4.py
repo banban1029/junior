@@ -37,27 +37,121 @@ start_date = datetime(2022, 3, 1)
 end_date = datetime(2022, 4, 30)
 
 # 予約可能なスロットの生成関数
-def generate_slots(start_date, end_date):
+# 予約可能スロットの生成関数（ルールに基づく）
+def generate_slots_with_rules(start_date, end_date, activity):
     available_slots = []
-    # 日付を生成し、各日付にAMとPMを追加
     current_date = start_date
+
+    # ルールの適用
     while current_date <= end_date:
-        available_slots.append((current_date.strftime("%Y/%m/%d"), "AM"))
-        available_slots.append((current_date.strftime("%Y/%m/%d"), "PM"))
+        # 温泉ツアー: 4月は予約不可
+        if activity == "温泉ツアー":
+            if current_date.month == 4:
+                current_date += timedelta(days=1)
+                continue
+            else:
+                available_slots.append((current_date.strftime("%Y/%m/%d"), "AM"))
+                available_slots.append((current_date.strftime("%Y/%m/%d"), "PM"))
+
+        # 遊園地ツアー: 3月15日〜3月31日まで予約不可、日曜日は予約が埋まりやすい
+        elif location in activity_data["遊園地ツアー"]:
+            if current_date.month == 3 and 15 <= current_date.day <= 31:
+                current_date += timedelta(days=1)
+                continue
+            else:
+                available_slots.append((current_date.strftime("%Y/%m/%d"), "AM"))
+                available_slots.append((current_date.strftime("%Y/%m/%d"), "PM"))
+
+        # バスツアー: 平日は午前中が予約不可
+        elif location in activity_data["バスツアー"]:
+            if current_date.weekday() < 5:  # 平日
+                available_slots.append((current_date.strftime("%Y/%m/%d"), "PM"))  # 午後のみ
+            else:
+                available_slots.append((current_date.strftime("%Y/%m/%d"), "AM"))
+                available_slots.append((current_date.strftime("%Y/%m/%d"), "PM"))
+
         current_date += timedelta(days=1)
+
     return available_slots
 
-# 各アクティビティと場所ごとに予約可能スロットを管理
+# 予約済みのスロットを固定で生成
+def generate_booked_slots(available_slots, rate):
+    booked_count = int(len(available_slots) * rate)
+    booked_slots = random.sample(available_slots, booked_count)  # ランダムな予約済みスロットを選択
+    return booked_slots
+
+# 予約スロット生成（ルール適用）および予約状況の管理
 available_slots_per_location = {}
+booked_slots_per_location = {}
+
 for activity, locations in activity_data.items():
     for location in locations:
-        available_slots_per_location[location] = generate_slots(start_date, end_date)
+        # スロットを生成
+        available_slots = generate_slots_with_rules(start_date, end_date, activity)
+        
+        # activityごとの予約可能スロットの生成
+        available_slots_per_location[location] = available_slots
+        
+        # 予約済みスロットの割合を設定
+        if location in ["USJ", "ディズニーランド", "ディズニーシー", "登別"]:  # 混雑しやすい
+            booked_slots_per_location[location] = generate_booked_slots(available_slots, 0.8)
+        elif location in ["中華街", "黒潮市場", "ひらかたパーク"]:  # 混雑しにくい
+            booked_slots_per_location[location] = generate_booked_slots(available_slots, 0.2)
+        else:  # 予約できない
+            booked_slots_per_location[location] = generate_booked_slots(available_slots, 1.0)
+            
+        # 予約済みスロットの割合を設定
+        if activity == "遊園地ツアー":
+            if location in ["USJ", "ディズニーランド", "ディズニーシー"]:  # 混雑しやすい遊園地
+                weekday_slots = [slot for slot in available_slots if datetime.strptime(slot[0], "%Y/%m/%d").weekday() < 5]  # 平日スロット
+                weekend_slots = [slot for slot in available_slots if datetime.strptime(slot[0], "%Y/%m/%d").weekday() >= 5]  # 週末スロット
+                booked_weekday_slots = generate_booked_slots(weekday_slots, 0.3) # 平日30%予約済み
+                booked_weekend_slots = generate_booked_slots(weekend_slots, 0.6) # 週末は80%予約済み
+                booked_slots_per_location[location] = booked_weekday_slots + booked_weekend_slots
+            else:
+                weekday_slots = [slot for slot in available_slots if datetime.strptime(slot[0], "%Y/%m/%d").weekday() < 5]  # 平日スロット
+                weekend_slots = [slot for slot in available_slots if datetime.strptime(slot[0], "%Y/%m/%d").weekday() >= 5]  # 週末スロット
+                booked_weekday_slots = generate_booked_slots(weekday_slots, 0.1) # 平日10%予約済み
+                booked_weekend_slots = generate_booked_slots(weekend_slots, 0.3) # 週末は30%予約済み
+                booked_slots_per_location[location] = booked_weekday_slots + booked_weekend_slots
 
-# ランダムに50%のスロットを予約済みとして設定
-booked_slots_per_location = {}
-for location, slots in available_slots_per_location.items():
-    number_of_booked_slots = len(slots) // 2
-    booked_slots_per_location[location] = random.sample(slots, number_of_booked_slots)
+        elif activity == "温泉ツアー":
+            # 土曜日の午後だけに混雑割合0.8を適用
+            saturday_pm_slots = [slot for slot in available_slots if datetime.strptime(slot[0], "%Y/%m/%d").weekday() == 5 and slot[1] == "PM"]
+
+            # 土曜日午後以外は通常の割合（例として0.5）
+            other_slots = [slot for slot in available_slots if not (datetime.strptime(slot[0], "%Y/%m/%d").weekday() == 5 and slot[1] == "PM")]
+
+            booked_saturday_pm_slots = generate_booked_slots(saturday_pm_slots, 0.8)
+            booked_other_slots = generate_booked_slots(other_slots, 0.4)
+
+            # 土曜日午後とその他のスロットを結合
+            booked_slots_per_location[location] = booked_saturday_pm_slots + booked_other_slots
+        
+        elif activity == "バスツアー":
+            booked_slots_per_location[location] = generate_booked_slots(available_slots, 0.3)
+
+
+# 予約スロットリストをアクティビティごとに schedule.txt に書き込む
+with open("schedule.txt", "w") as f:
+    for activity, locations in activity_data.items():
+        f.write(f"アクティビティ: {activity}\n")
+        f.write("=" * 40 + "\n")  # アクティビティの区切り線を追加
+        
+        for location in locations:
+            f.write(f"場所: {location}\n")
+            f.write("-" * 30 + "\n")  # 場所の区切り線を追加
+            
+            slots = booked_slots_per_location.get(location, [])
+            if slots:
+                for slot in slots:
+                    date, time = slot
+                    f.write(f"日付: {date}, 時間帯: {time}\n")  # 見やすい形式で出力
+            else:
+                f.write("予約済みスロットはありません。\n")
+            
+            f.write("\n" + "=" * 30 + "\n\n")  # 場所ごとの区切り
+
 
 @app.route('/', methods=['POST'])
 # DialogflowからWebhookリクエストが来るとindex()関数が呼び出される
