@@ -3,7 +3,9 @@ import json
 import os
 import glob
 import inspect
-
+import random
+from datetime import datetime, timedelta
+import re
 
 app = Flask(__name__)
 
@@ -18,7 +20,6 @@ budget_data = {
     "USJ": 30000, "ディズニーランド": 50000, "ディズニーシー": 50000, "花やしき": 40000, "ひらかたパーク": 10000,
     "中華街": 15500, "黒潮市場": 15500, "姫路城": 10000
 }
-max_attempts = 10
 
 # ユーザがどの項目を入力したかを追跡するための変数を初期化
 user_data = {
@@ -27,8 +28,36 @@ user_data = {
     "date": None
 }
 
-# 予約可能性のチェックのためのカウンタ
+# 予約可能性のチェックのためのカウンタ, 10回超えたら予約不可
+max_attempts = 10
 attempt_count = 0
+
+# 予約可能なスロットの生成
+start_date = datetime(2022, 3, 1)
+end_date = datetime(2022, 4, 30)
+
+# 予約可能なスロットの生成関数
+def generate_slots(start_date, end_date):
+    available_slots = []
+    # 日付を生成し、各日付にAMとPMを追加
+    current_date = start_date
+    while current_date <= end_date:
+        available_slots.append((current_date.strftime("%Y/%m/%d"), "AM"))
+        available_slots.append((current_date.strftime("%Y/%m/%d"), "PM"))
+        current_date += timedelta(days=1)
+    return available_slots
+
+# 各アクティビティと場所ごとに予約可能スロットを管理
+available_slots_per_location = {}
+for activity, locations in activity_data.items():
+    for location in locations:
+        available_slots_per_location[location] = generate_slots(start_date, end_date)
+
+# ランダムに50%のスロットを予約済みとして設定
+booked_slots_per_location = {}
+for location, slots in available_slots_per_location.items():
+    number_of_booked_slots = len(slots) // 2
+    booked_slots_per_location[location] = random.sample(slots, number_of_booked_slots)
 
 @app.route('/', methods=['POST'])
 # DialogflowからWebhookリクエストが来るとindex()関数が呼び出される
@@ -93,15 +122,31 @@ def index():
                 budget = budget_data.get(user_data['location'], 0)
                 message += f'予算は{budget // 10000}万円です。予約可能か確認します...'
 
-                # 予約可能性のチェックを入れる（簡単化のため詳細な条件分岐は省略）
-                # 予約不可の場合
+                # 予約可能性のチェックを入れる
+                # 日付と時間の解析 
+                match = re.search(r'(\d{4}/\d{1,2}/\d{1,2})\s*(AM|PM)', user_data['date'])
+                if match:
+                    desired_date = match.group(1)
+                    desired_time = match.group(2)
+                
+                    if (desired_date, desired_time) in booked_slots_per_location[user_data['location']]:
+                        message = f'{desired_date}の{desired_time}は予約が埋まっています。'
+                    else:
+                        message = f'{desired_date}の{desired_time}は予約可能です。'
+                        budget = budget_data.get(user_data['location'], 0)
+                        message += f'予算は{budget // 10000}万円です。'
+                else:
+                    message = '正しい日付と時間を指定してください。'
+                
+                continueFlag = True
+                
+                # 予約不可の場合( 10回以上のリトライ ) 
                 if attempt_count >= max_attempts:
                     message = '申し訳ありません、予約できませんでした。対話を終了します。'
                     continueFlag = False
                 else:
                     message += '予約可能です！'
 
-            continueFlag = True
             # 状態の更新
             with open(data_path, mode='w', encoding='utf-8') as w:
                 w.write(str(state))
@@ -149,3 +194,5 @@ def printV(content):
     frame = inspect.currentframe().f_back
     print(content, end='')
     print(' (file: ' + os.path.basename(frame.f_code.co_filename) + ', function: ' + frame.f_code.co_name + ', line: ' + str(frame.f_lineno) + ')')
+
+
