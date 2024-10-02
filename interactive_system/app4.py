@@ -93,14 +93,6 @@ for activity, locations in activity_data.items():
         available_slots_per_location[location] = available_slots
         
         # 予約済みスロットの割合を設定
-        if location in ["USJ", "ディズニーランド", "ディズニーシー", "登別"]:  # 混雑しやすい
-            booked_slots_per_location[location] = generate_booked_slots(available_slots, 0.8)
-        elif location in ["中華街", "黒潮市場", "ひらかたパーク"]:  # 混雑しにくい
-            booked_slots_per_location[location] = generate_booked_slots(available_slots, 0.2)
-        else:  # 予約できない
-            booked_slots_per_location[location] = generate_booked_slots(available_slots, 1.0)
-            
-        # 予約済みスロットの割合を設定
         if activity == "遊園地ツアー":
             if location in ["USJ", "ディズニーランド", "ディズニーシー"]:  # 混雑しやすい遊園地
                 weekday_slots = [slot for slot in available_slots if datetime.strptime(slot[0], "%Y/%m/%d").weekday() < 5]  # 平日スロット
