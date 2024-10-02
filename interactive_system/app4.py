@@ -53,7 +53,7 @@ def generate_slots_with_rules(start_date, end_date, activity):
                 available_slots.append((current_date.strftime("%Y/%m/%d"), "AM"))
                 available_slots.append((current_date.strftime("%Y/%m/%d"), "PM"))
 
-        # 遊園地ツアー: 3月15日〜3月31日まで予約不可、日曜日は予約が埋まりやすい
+        # 遊園地ツアー: 3月15日〜3月31日まで予約不可
         elif location in activity_data["遊園地ツアー"]:
             if current_date.month == 3 and 15 <= current_date.day <= 31:
                 current_date += timedelta(days=1)
@@ -93,36 +93,35 @@ for activity, locations in activity_data.items():
         available_slots_per_location[location] = available_slots
         
         # 予約済みスロットの割合を設定
-        if activity == "遊園地ツアー":
-            if location in ["USJ", "ディズニーランド", "ディズニーシー"]:  # 混雑しやすい遊園地
-                weekday_slots = [slot for slot in available_slots if datetime.strptime(slot[0], "%Y/%m/%d").weekday() < 5]  # 平日スロット
-                weekend_slots = [slot for slot in available_slots if datetime.strptime(slot[0], "%Y/%m/%d").weekday() >= 5]  # 週末スロット
-                booked_weekday_slots = generate_booked_slots(weekday_slots, 0.3) # 平日30%予約済み
-                booked_weekend_slots = generate_booked_slots(weekend_slots, 0.6) # 週末は80%予約済み
-                booked_slots_per_location[location] = booked_weekday_slots + booked_weekend_slots
-            else:
-                weekday_slots = [slot for slot in available_slots if datetime.strptime(slot[0], "%Y/%m/%d").weekday() < 5]  # 平日スロット
-                weekend_slots = [slot for slot in available_slots if datetime.strptime(slot[0], "%Y/%m/%d").weekday() >= 5]  # 週末スロット
-                booked_weekday_slots = generate_booked_slots(weekday_slots, 0.1) # 平日10%予約済み
-                booked_weekend_slots = generate_booked_slots(weekend_slots, 0.3) # 週末は30%予約済み
-                booked_slots_per_location[location] = booked_weekday_slots + booked_weekend_slots
-
-        elif activity == "温泉ツアー":
+        if activity == "温泉ツアー":
             # 土曜日の午後だけに混雑割合0.8を適用
             saturday_pm_slots = [slot for slot in available_slots if datetime.strptime(slot[0], "%Y/%m/%d").weekday() == 5 and slot[1] == "PM"]
 
-            # 土曜日午後以外は通常の割合（例として0.5）
+            # 土曜日午後以外は通常の割合0.5を適用
             other_slots = [slot for slot in available_slots if not (datetime.strptime(slot[0], "%Y/%m/%d").weekday() == 5 and slot[1] == "PM")]
 
-            booked_saturday_pm_slots = generate_booked_slots(saturday_pm_slots, 0.8)
+            booked_saturday_pm_slots = generate_booked_slots(saturday_pm_slots, 0.6)
             booked_other_slots = generate_booked_slots(other_slots, 0.4)
 
             # 土曜日午後とその他のスロットを結合
             booked_slots_per_location[location] = booked_saturday_pm_slots + booked_other_slots
+            
+        elif activity == "遊園地ツアー":
+            if location in ["USJ", "ディズニーランド", "ディズニーシー"]:  # 混雑しやすい遊園地
+                weekday_slots = [slot for slot in available_slots if datetime.strptime(slot[0], "%Y/%m/%d").weekday() < 5]  # 平日スロット
+                weekend_slots = [slot for slot in available_slots if datetime.strptime(slot[0], "%Y/%m/%d").weekday() >= 5]  # 週末スロット
+                booked_weekday_slots = generate_booked_slots(weekday_slots, 0.6) # 平日60%予約済み
+                booked_weekend_slots = generate_booked_slots(weekend_slots, 0.8) # 週末は80%予約済み
+                booked_slots_per_location[location] = booked_weekday_slots + booked_weekend_slots
+            else:
+                weekday_slots = [slot for slot in available_slots if datetime.strptime(slot[0], "%Y/%m/%d").weekday() < 5]  # 平日スロット
+                weekend_slots = [slot for slot in available_slots if datetime.strptime(slot[0], "%Y/%m/%d").weekday() >= 5]  # 週末スロット
+                booked_weekday_slots = generate_booked_slots(weekday_slots, 0.4) # 平日30%予約済み
+                booked_weekend_slots = generate_booked_slots(weekend_slots, 0.5) # 週末は40%予約済み
+                booked_slots_per_location[location] = booked_weekday_slots + booked_weekend_slots
         
         elif activity == "バスツアー":
-            booked_slots_per_location[location] = generate_booked_slots(available_slots, 0.3)
-
+            booked_slots_per_location[location] = generate_booked_slots(available_slots, 0.2)
 
 # 予約スロットリストをアクティビティごとに schedule.txt に書き込む
 with open("schedule.txt", "w") as f:
@@ -134,13 +133,28 @@ with open("schedule.txt", "w") as f:
             f.write(f"場所: {location}\n")
             f.write("-" * 30 + "\n")  # 場所の区切り線を追加
             
-            slots = booked_slots_per_location.get(location, [])
-            if slots:
-                for slot in slots:
+            # 予約済みスロットの出力
+            f.write("予約済みスロット:\n")
+            booked_slots = booked_slots_per_location.get(location, [])
+            if booked_slots:
+                for slot in booked_slots:
                     date, time = slot
-                    f.write(f"日付: {date}, 時間帯: {time}\n")  # 見やすい形式で出力
+                    f.write(f"  日付: {date}, 時間帯: {time}\n")  # 見やすい形式で出力
             else:
-                f.write("予約済みスロットはありません。\n")
+                f.write("  予約済みスロットはありません。\n")
+            
+            f.write("\n")
+            
+            # 予約可能スロットの出力
+            f.write("予約可能スロット:\n")
+            available_slots = available_slots_per_location.get(location, [])
+            if available_slots:
+                for slot in available_slots:
+                    date, time = slot
+                    if slot not in booked_slots:  # 予約済みでないスロットのみ表示
+                        f.write(f"  日付: {date}, 時間帯: {time}\n")
+            else:
+                f.write("  予約可能なスロットはありません。\n")
             
             f.write("\n" + "=" * 30 + "\n\n")  # 場所ごとの区切り
 
