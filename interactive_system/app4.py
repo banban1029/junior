@@ -206,6 +206,7 @@ def index():
             elif state == 2:
                 if user_data['activity'] not in activity_data:
                     message = '申し訳ありません、そのアクティビティは選べません。温泉ツアー、遊園地ツアー、バスツアーから選んでください。'
+                    state = 1
                 else:
                     # 状態(state)の取得
                     data_path1 = os.getcwd() + '/activity.txt'
@@ -230,6 +231,7 @@ def index():
             elif state == 3:
                 if user_data['location'] not in activity_data[user_data['activity']]:
                     message = '申し訳ありません、その場所は選べません。リストにある場所から選んでください。'
+                    state = 2
                 else:
                     message = 'ご希望の日付を教えてください。（例: 2024/10/05 AM）'
                     user_data['date'] = input
