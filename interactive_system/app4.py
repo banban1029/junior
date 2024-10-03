@@ -201,9 +201,9 @@ def index():
             # 状態に応じて異なる発話を生成
             if state == 1:
                 message = 'どのアクティビティをご希望ですか？（温泉ツアー、遊園地ツアー、バスツアーから選んでください）'
-                user_data['activity'] = input
                 state += 1
             elif state == 2:
+                user_data["activity"] = input
                 if user_data['activity'] not in activity_data:
                     message = '申し訳ありません、そのアクティビティは選べません。温泉ツアー、遊園地ツアー、バスツアーから選んでください。'
                     state = 1
@@ -212,31 +212,50 @@ def index():
                     data_path1 = os.getcwd() + '/activity.txt'
 
                     # 状態ファイルの確認
-                    # state.txtがHerokuサーバ上にあるかチェック
-                    if glob.glob(data_path1):  # state.txtが見つかった場合
+                    # activity.txtがHerokuサーバ上にあるかチェック
+                    if glob.glob(data_path1):  # activity.txtが見つかった場合
                         printV(data_path1 + ' is found!')
                         with open(data_path1, mode='r', encoding='utf-8') as r:
 
-                            # state.txtから状態を取得
+                            # activity.txtから状態を取得
                             user_data["activity"] = int(r.read())
-                    else:  # state.txtが見つからなかった場合
-                        printV(data_path + ' is not found!')
-                        with open(data_path, mode='w', encoding='utf-8') as w:
-                            w.write('1')
+                    else:  # activity.txtが見つらなかった場合
+                        printV(data_path1 + ' is not found!')
+                        with open(data_path1, mode='w', encoding='utf-8') as w:
+                            w.write(input)
                         user_data["activity"] = input
     
                     message = f'{user_data["activity"]}のどの場所をご希望ですか？'
-                    user_data['location'] = input
+                    printV(user_data["activity"])
                     state += 1
             elif state == 3:
-                if user_data['location'] not in activity_data[user_data['activity']]:
+                user_data["location"] = input
+                if user_data["location"] not in activity_data[user_data["activity"]]:
                     message = '申し訳ありません、その場所は選べません。リストにある場所から選んでください。'
                     state = 2
                 else:
+                    
+                    # 状態(state)の取得
+                    data_path2 = os.getcwd() + '/location.txt'
+
+                    # 状態ファイルの確認
+                    # location.txtがHerokuサーバ上にあるかチェック
+                    if glob.glob(data_path2):  # location.txtが見つかった場合
+                        printV(data_path2 + ' is found!')
+                        with open(data_path2, mode='r', encoding='utf-8') as r:
+
+                            # activity.txtから状態を取得
+                            user_data["location"] = int(r.read())
+                    else:  # activity.txtが見つらなかった場合
+                        printV(data_path2 + ' is not found!')
+                        with open(data_path2, mode='w', encoding='utf-8') as w:
+                            w.write(input)
+                        user_data["location"] = input
+                        
                     message = 'ご希望の日付を教えてください。（例: 2024/10/05 AM）'
-                    user_data['date'] = input
                     state += 1
             elif state == 4:
+                user_data['date'] = input
                 message = f'予約内容：{user_data["activity"]} - {user_data["location"]} - {user_data["date"]}\n'
                 budget = budget_data.get(user_data['location'], 0)
                 message += f'予算は{budget // 10000}万円です。予約可能か確認します...'
