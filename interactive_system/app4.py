@@ -207,6 +207,23 @@ def index():
                 if user_data['activity'] not in activity_data:
                     message = '申し訳ありません、そのアクティビティは選べません。温泉ツアー、遊園地ツアー、バスツアーから選んでください。'
                 else:
+                    # 状態(state)の取得
+                    data_path1 = os.getcwd() + '/activity.txt'
+
+                    # 状態ファイルの確認
+                    # state.txtがHerokuサーバ上にあるかチェック
+                    if glob.glob(data_path1):  # state.txtが見つかった場合
+                        printV(data_path1 + ' is found!')
+                        with open(data_path1, mode='r', encoding='utf-8') as r:
+
+                            # state.txtから状態を取得
+                            user_data["activity"] = int(r.read())
+                    else:  # state.txtが見つからなかった場合
+                        printV(data_path + ' is not found!')
+                        with open(data_path, mode='w', encoding='utf-8') as w:
+                            w.write('1')
+                        user_data["activity"] = input
+    
                     message = f'{user_data["activity"]}のどの場所をご希望ですか？'
                     user_data['location'] = input
                     state += 1
@@ -254,6 +271,7 @@ def index():
     # カウントを増やす
     attempt_count += 1
 
+    continueFlag = True
     # Webhookレスポンスの作成
     response = makeResponse(message, continueFlag)
     return json.dumps(response)
