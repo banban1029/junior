@@ -54,7 +54,7 @@ def generate_slots_with_rules(start_date, end_date, activity):
                 available_slots.append((current_date.strftime("%Y/%m/%d"), "PM"))
 
         # 遊園地ツアー: 3月15日〜3月31日まで予約不可
-        elif location in activity_data["遊園地ツアー"]:
+        if activity == "遊園地ツアー":
             if current_date.month == 3 and 15 <= current_date.day <= 31:
                 current_date += timedelta(days=1)
                 continue
@@ -63,7 +63,7 @@ def generate_slots_with_rules(start_date, end_date, activity):
                 available_slots.append((current_date.strftime("%Y/%m/%d"), "PM"))
 
         # バスツアー: 平日は午前中が予約不可
-        elif location in activity_data["バスツアー"]:
+        if activity == "バスツアー":
             if current_date.weekday() < 5:  # 平日
                 available_slots.append((current_date.strftime("%Y/%m/%d"), "PM"))  # 午後のみ
             else:
@@ -124,6 +124,26 @@ for activity, locations in activity_data.items():
             booked_slots_per_location[location] = generate_booked_slots(available_slots, 0.2)
 
 
+# ユーティリティ関数を追加
+def read_file(filepath, type, initial_value=None):
+    if glob.glob(filepath):  # .txtが見つかった場合
+        printV(filepath + ' is found!')
+        with open(filepath, mode='r', encoding='utf-8') as r:
+            if type == 'int':
+                return int(r.read().strip())
+            else:
+                return r.read().strip()
+    else:  # .txtが見つからなかった場合
+        printV(filepath + ' is not found!')
+        with open(filepath, mode='w', encoding='utf-8') as w:
+            w.write(str(initial_value)) # 初期化
+            return initial_value
+
+def write_file(filepath, content):
+    with open(filepath, mode='w', encoding='utf-8') as w:
+        w.write(str(content))
+  
+        
 @app.route('/', methods=['POST'])
 # DialogflowからWebhookリクエストが来るとindex()関数が呼び出される
 def index():
@@ -136,85 +156,26 @@ def index():
         message = 'さようなら'
         continueFlag = False
     else:  # 通常のメッセージを受け取った場合
+        
         message = ''
+        continueFlag = True
+        
         # 状態(state)の取得
-        data_path0 = os.getcwd() + '/scheduled.txt'
         data_path = os.getcwd() + '/state.txt'
+        data_path0 = os.getcwd() + '/scheduled.txt'
         data_path1 = os.getcwd() + '/activity.txt'
         data_path2 = os.getcwd() + '/location.txt'
         data_path3 = os.getcwd() + '/date.txt'
         data_path4 = os.getcwd() + '/attempt_count.txt'
         
-        # 状態ファイルの確認
-        # state.txtがHerokuサーバ上にあるかチェック
-        if glob.glob(data_path):  # state.txtが見つかった場合
-            printV(data_path + ' is found!')
-            with open(data_path, mode='r', encoding='utf-8') as r:
-                
-                # state.txtから状態を取得
-                state = int(r.read())
-        else:  # state.txtが見つからなかった場合
-            printV(data_path + ' is not found!')
-            with open(data_path, mode='w', encoding='utf-8') as w:
-                w.write('1')
-            state = 1
+        # index関数内のファイル読み書きのリファクタリング
+        state = read_file(data_path, 'int', 1)
+        user_data["activity"] = read_file(data_path1, 'str', None)
+        user_data["location"] = read_file(data_path2, 'str', None)
+        user_data["date"] = read_file(data_path3, 'str', None)
+        attempt_count = read_file(data_path4, 'int', 0)
         
-        # 状態ファイルの確認
-        # activity.txtがHerokuサーバ上にあるかチェック
-        if glob.glob(data_path1):  # activity.txtが見つかった場合
-            printV(data_path1 + ' is found!')
-            with open(data_path1, mode='r', encoding='utf-8') as r:
-                
-                # state.txtから状態を取得
-                user_data["activity"] = r.read()
-        else:  # state.txtが見つからなかった場合
-            printV(data_path + ' is not found!')
-            with open(data_path, mode='w', encoding='utf-8') as w:
-                w.write(None)
-            user_data["activity"] = None
-        
-        # 状態ファイルの確認
-        # location.txtがHerokuサーバ上にあるかチェック
-        if glob.glob(data_path2):  # location.txtが見つかった場合
-            printV(data_path2 + ' is found!')
-            with open(data_path2, mode='r', encoding='utf-8') as r:
-                
-                # location.txtから状態を取得
-                user_data["location"] = r.read()
-        else:  # location.txtが見つからなかった場合
-            printV(data_path2 + ' is not found!')
-            with open(data_path2, mode='w', encoding='utf-8') as w:
-                w.write(None)
-            user_data["location"] = None
-        
-        # 状態ファイルの確認
-        # date.txtがHerokuサーバ上にあるかチェック
-        if glob.glob(data_path3):  # date.txtが見つかった場合
-            printV(data_path3 + ' is found!')
-            with open(data_path3, mode='r', encoding='utf-8') as r:
-                
-                # date.txtから状態を取得
-                user_data["date"] = r.read()
-        else:  # date.txtが見つからなかった場合
-            printV(data_path3 + ' is not found!')
-            with open(data_path3, mode='w', encoding='utf-8') as w:
-                w.write(None)
-            user_data["date"] = None
-            
-        
-        # 状態ファイルの確認
-        # attempt_count.txtがHerokuサーバ上にあるかチェック
-        if glob.glob(data_path4):  # attempt_count.txtが見つかった場合
-            printV(data_path4 + ' is found!')
-            with open(data_path4, mode='r', encoding='utf-8') as r:
-                
-                # date.txtから状態を取得
-                attempt_count = int(r.read())
-        else:  # attempt_count.txtが見つからなかった場合
-            printV(data_path4 + ' is not found!')
-            with open(data_path3, mode='w', encoding='utf-8') as w:
-                w.write('0')
-            attempt_count = 0
+        ###########################################################
         
         # 状態ファイルの確認
         # schedule.txtがHerokuサーバ上にあるかチェック
@@ -260,9 +221,7 @@ def index():
                 w.write('1')
                 message = '状態をリセットしました'
                 continueFlag = False
-        else: 
-            continueFlag = True
-            
+        else:             
             # 状態に応じて異なる発話を生成
             if state == 1:
                 message = 'どのアクティビティをご希望ですか？（温泉ツアー、遊園地ツアー、バスツアーから選んでください）'
