@@ -123,41 +123,6 @@ for activity, locations in activity_data.items():
         elif activity == "バスツアー":
             booked_slots_per_location[location] = generate_booked_slots(available_slots, 0.2)
 
-# 予約スロットリストをアクティビティごとに schedule.txt に書き込む
-with open("schedule.txt", "w") as f:
-    for activity, locations in activity_data.items():
-        f.write(f"アクティビティ: {activity}\n")
-        f.write("=" * 40 + "\n")  # アクティビティの区切り線を追加
-        
-        for location in locations:
-            f.write(f"場所: {location}\n")
-            f.write("-" * 30 + "\n")  # 場所の区切り線を追加
-            
-            # 予約済みスロットの出力
-            f.write("予約済みスロット:\n")
-            booked_slots = booked_slots_per_location.get(location, [])
-            if booked_slots:
-                for slot in booked_slots:
-                    date, time = slot
-                    f.write(f"  日付: {date}, 時間帯: {time}\n")  # 見やすい形式で出力
-            else:
-                f.write("  予約済みスロットはありません。\n")
-            
-            f.write("\n")
-            
-            # 予約可能スロットの出力
-            f.write("予約可能スロット:\n")
-            available_slots = available_slots_per_location.get(location, [])
-            if available_slots:
-                for slot in available_slots:
-                    date, time = slot
-                    if slot not in booked_slots:  # 予約済みでないスロットのみ表示
-                        f.write(f"  日付: {date}, 時間帯: {time}\n")
-            else:
-                f.write("  予約可能なスロットはありません。\n")
-            
-            f.write("\n" + "=" * 30 + "\n\n")  # 場所ごとの区切り
-
 
 @app.route('/', methods=['POST'])
 # DialogflowからWebhookリクエストが来るとindex()関数が呼び出される
@@ -173,7 +138,12 @@ def index():
     else:  # 通常のメッセージを受け取った場合
         message = ''
         # 状態(state)の取得
+        data_path0 = os.getcwd() + '/scheduled.txt'
         data_path = os.getcwd() + '/state.txt'
+        data_path1 = os.getcwd() + '/activity.txt'
+        data_path2 = os.getcwd() + '/location.txt'
+        data_path3 = os.getcwd() + '/date.txt'
+        data_path4 = os.getcwd() + '/attempt_count.txt'
         
         # 状態ファイルの確認
         # state.txtがHerokuサーバ上にあるかチェック
@@ -188,6 +158,99 @@ def index():
             with open(data_path, mode='w', encoding='utf-8') as w:
                 w.write('1')
             state = 1
+        
+        # 状態ファイルの確認
+        # activity.txtがHerokuサーバ上にあるかチェック
+        if glob.glob(data_path1):  # activity.txtが見つかった場合
+            printV(data_path1 + ' is found!')
+            with open(data_path1, mode='r', encoding='utf-8') as r:
+                
+                # state.txtから状態を取得
+                user_data["activity"] = r.read()
+        else:  # state.txtが見つからなかった場合
+            printV(data_path + ' is not found!')
+            with open(data_path, mode='w', encoding='utf-8') as w:
+                w.write(None)
+            user_data["activity"] = None
+        
+        # 状態ファイルの確認
+        # location.txtがHerokuサーバ上にあるかチェック
+        if glob.glob(data_path2):  # location.txtが見つかった場合
+            printV(data_path2 + ' is found!')
+            with open(data_path2, mode='r', encoding='utf-8') as r:
+                
+                # location.txtから状態を取得
+                user_data["location"] = r.read()
+        else:  # location.txtが見つからなかった場合
+            printV(data_path2 + ' is not found!')
+            with open(data_path2, mode='w', encoding='utf-8') as w:
+                w.write(None)
+            user_data["location"] = None
+        
+        # 状態ファイルの確認
+        # date.txtがHerokuサーバ上にあるかチェック
+        if glob.glob(data_path3):  # date.txtが見つかった場合
+            printV(data_path3 + ' is found!')
+            with open(data_path3, mode='r', encoding='utf-8') as r:
+                
+                # date.txtから状態を取得
+                user_data["date"] = r.read()
+        else:  # date.txtが見つからなかった場合
+            printV(data_path3 + ' is not found!')
+            with open(data_path3, mode='w', encoding='utf-8') as w:
+                w.write(None)
+            user_data["date"] = None
+            
+        
+        # 状態ファイルの確認
+        # attempt_count.txtがHerokuサーバ上にあるかチェック
+        if glob.glob(data_path4):  # attempt_count.txtが見つかった場合
+            printV(data_path4 + ' is found!')
+            with open(data_path4, mode='r', encoding='utf-8') as r:
+                
+                # date.txtから状態を取得
+                attempt_count = int(r.read())
+        else:  # attempt_count.txtが見つからなかった場合
+            printV(data_path4 + ' is not found!')
+            with open(data_path3, mode='w', encoding='utf-8') as w:
+                w.write('0')
+            attempt_count = 0
+        
+        # 状態ファイルの確認
+        # schedule.txtがHerokuサーバ上にあるかチェック
+        # 予約スロットリストをアクティビティごとに schedule.txt に書き込む
+        with open(data_path0, mode='w', encoding='utf-8') as f:
+            for activity, locations in activity_data.items():
+                    f.write(f"アクティビティ: {activity}\n")
+                    f.write("=" * 40 + "\n")  # アクティビティの区切り線を追加
+                    for location in locations:
+                        f.write(f"場所: {location}\n")
+                        f.write("-" * 30 + "\n")  # 場所の区切り線を追加
+                        # 予約済みスロットの出力
+                        f.write("予約済みスロット:\n")
+                        booked_slots = booked_slots_per_location.get(location, [])
+                        if booked_slots:
+                            for slot in booked_slots:
+                                date, time = slot
+                                f.write(f"  日付: {date}, 時間帯: {time}\n")  # 見やすい形式で出力
+                        else:
+                            f.write("  予約済みスロットはありません。\n")
+                        f.write("\n")
+                        # 予約可能スロットの出力
+                        f.write("予約可能スロット:\n")
+                        available_slots = available_slots_per_location.get(location, [])
+                        if available_slots:
+                            for slot in available_slots:
+                                date, time = slot
+                                if slot not in booked_slots:  # 予約済みでないスロットのみ表示
+                                    f.write(f"  日付: {date}, 時間帯: {time}\n")
+                        else:
+                            f.write("  予約可能なスロットはありません。\n")
+                        f.write("\n" + "=" * 30 + "\n\n")  # 場所ごとの区切り線を追加    
+                                        
+        with open(data_path0, mode='r', encoding='utf-8') as f:
+            content = f.read()  # ファイルの内容を読み取る
+            printV(content)  # ファイルの内容を出力 
             
         ###########################################################
         
@@ -198,76 +261,72 @@ def index():
                 message = '状態をリセットしました'
                 continueFlag = False
         else: 
+            continueFlag = True
+            
             # 状態に応じて異なる発話を生成
             if state == 1:
                 message = 'どのアクティビティをご希望ですか？（温泉ツアー、遊園地ツアー、バスツアーから選んでください）'
-                state += 1
+                state = 2
             elif state == 2:
                 user_data["activity"] = input
-                if user_data['activity'] not in activity_data:
+                if user_data["activity"] not in activity_data:
                     message = '申し訳ありません、そのアクティビティは選べません。温泉ツアー、遊園地ツアー、バスツアーから選んでください。'
-                    state = 1
+                    state = 2
                 else:
-                    # 状態(state)の取得
-                    data_path1 = os.getcwd() + '/activity.txt'
-
-                    # 状態ファイルの確認
-                    # activity.txtがHerokuサーバ上にあるかチェック
                     if glob.glob(data_path1):  # activity.txtが見つかった場合
                         printV(data_path1 + ' is found!')
-                        with open(data_path1, mode='r', encoding='utf-8') as r:
-
-                            # activity.txtから状態を取得
-                            user_data["activity"] = int(r.read())
-                    else:  # activity.txtが見つらなかった場合
-                        printV(data_path1 + ' is not found!')
                         with open(data_path1, mode='w', encoding='utf-8') as w:
                             w.write(input)
                         user_data["activity"] = input
-    
+                    else:  # activity.txtが見つらなかった場合
+                        printV(data_path1 + ' is not saved!')
+                        state = 1
+                        
                     message = f'{user_data["activity"]}のどの場所をご希望ですか？'
                     printV(user_data["activity"])
-                    state += 1
+                    state = 3
+                    
             elif state == 3:
                 user_data["location"] = input
                 if user_data["location"] not in activity_data[user_data["activity"]]:
                     message = '申し訳ありません、その場所は選べません。リストにある場所から選んでください。'
-                    state = 2
+                    state = 3
                 else:
                     
-                    # 状態(state)の取得
-                    data_path2 = os.getcwd() + '/location.txt'
-
-                    # 状態ファイルの確認
-                    # location.txtがHerokuサーバ上にあるかチェック
                     if glob.glob(data_path2):  # location.txtが見つかった場合
                         printV(data_path2 + ' is found!')
-                        with open(data_path2, mode='r', encoding='utf-8') as r:
-
-                            # activity.txtから状態を取得
-                            user_data["location"] = int(r.read())
-                    else:  # activity.txtが見つらなかった場合
-                        printV(data_path2 + ' is not found!')
                         with open(data_path2, mode='w', encoding='utf-8') as w:
                             w.write(input)
                         user_data["location"] = input
+                    else:  # location.txtが見つらなかった場合
+                        printV(data_path2 + ' is not saved!')
+                        state = 1
                         
                     message = 'ご希望の日付を教えてください。（例: 2024/10/05 AM）'
-                    state += 1
+                    state = 4
             elif state == 4:
-                user_data['date'] = input
+                user_data["date"] = input
+                if glob.glob(data_path3):  # date.txtが見つかった場合
+                    printV(data_path3 + ' is found!')
+                    with open(data_path3, mode='w', encoding='utf-8') as w:
+                        w.write(input)
+                    user_data["date"] = input
+                else:  # date.txtが見つらなかった場合
+                    printV(data_path3 + ' is not saved!')
+                    state = 1
+                        
                 message = f'予約内容：{user_data["activity"]} - {user_data["location"]} - {user_data["date"]}\n'
-                budget = budget_data.get(user_data['location'], 0)
+                budget = budget_data.get(user_data["location"], 0)
                 message += f'予算は{budget // 10000}万円です。予約可能か確認します...'
 
                 # 予約可能性のチェックを入れる
                 # 日付と時間の解析 
-                match = re.search(r'(\d{4}/\d{1,2}/\d{1,2})\s*(AM|PM)', user_data['date'])
+                match = re.search(r'(\d{4}/\d{1,2}/\d{1,2})\s*(AM|PM)', user_data["date"])
                 if match:
                     desired_date = match.group(1)
                     desired_time = match.group(2)
                 
-                    if (desired_date, desired_time) in booked_slots_per_location[user_data['location']]:
+                    if (desired_date, desired_time) in booked_slots_per_location[user_data["location"]]:
                         message = f'{desired_date}の{desired_time}は予約が埋まっています。'
                     else:
                         message = f'{desired_date}の{desired_time}は予約可能です。'
@@ -276,30 +335,27 @@ def index():
                 else:
                     message = '正しい日付と時間を指定してください。'
                 
-                continueFlag = True
-                
+                attempt_count += 1
+                                    
                 # 予約不可の場合( 10回以上のリトライ ) 
                 if attempt_count >= max_attempts:
                     message = '申し訳ありません、予約できませんでした。対話を終了します。'
                     continueFlag = False
-                else:
-                    message += '予約可能です！'
 
             # 状態の更新
             with open(data_path, mode='w', encoding='utf-8') as w:
                 w.write(str(state))
+            
+            with open(data_path, mode='w', encoding='utf-8') as w:
+                w.write(str(attempt_count))
 
-    # カウントを増やす
-    attempt_count += 1
-
-    continueFlag = True
     # Webhookレスポンスの作成
     response = makeResponse(message, continueFlag)
     return json.dumps(response)
 
 
 # Webhookレスポンスの作成(JSON形式)
-# message: Google Homeの発話内容, continueFlag: 会話を続けるかどうかのフラグ (続ける: Yes, 終了: No)
+# message: Google Homeの発話内容, continueFljuag: 会話を続けるかどうかのフラグ (続ける: Yes, 終了: No)
 def makeResponse(message, continueFlag=True):
     response = {
         "payload": {
@@ -331,6 +387,7 @@ def makeResponse(message, continueFlag=True):
 # 詳細情報(Verbose)付き出力
 def printV(content):
     frame = inspect.currentframe().f_back
+    print('\n\n')
     print(content, end='')
     print(' (file: ' + os.path.basename(frame.f_code.co_filename) + ', function: ' + frame.f_code.co_name + ', line: ' + str(frame.f_lineno) + ')')
 
