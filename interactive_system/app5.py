@@ -260,36 +260,48 @@ def index():
                     message = 'ご希望の日付を教えてください。（例: 2024/10/05 AM）'
                     state = 4
             elif state == 4:
-                write_file(data_path3, input)
-                user_data["date"] = read_file(data_path3, 'str', None)
-                        
-                message = f'予約内容：{user_data["activity"]} - {user_data["location"]} - {user_data["date"]}\n'
-                budget = budget_data.get(user_data["location"], 0)
-                message += f'予算は{budget // 10000}万円です。予約可能か確認します...'
-
-                # 予約可能性のチェックを入れる
-                # 日付と時間の解析 
-                match = re.search(r'(\d{4}/\d{1,2}/\d{1,2})\s*(AM|PM)', user_data["date"])
-                if match:
-                    desired_date = match.group(1)
-                    desired_time = match.group(2)
                 
-                    if (desired_date, desired_time) in booked_slots_per_location[user_data["location"]]:
-                        message = f'{desired_date}の{desired_time}は予約が埋まっています。'
-                    else:
-                        message = f'{desired_date}の{desired_time}は予約可能です。'
-                        budget = budget_data.get(user_data['location'], 0)
-                        message += f'予算は{budget // 10000}万円です。'
+                # 課題5用　例: 形式に関係なく動作する、年月日の正規表現を追加                                
+                # 予約可能性のチェックを入れる
+                # 日付と時間の解析
+                match = re.match(r'(\d{4})[^\d]?(\d{1,2})[^\d]?(\d{1,2})[^\d]?\s*(AM|PM|am|pm|午前|午後)', input)
+                if match and len(match.groups()) == 4:
+                    try:
+                        year, month, day, date = match.groups()
+                        desired_date = datetime(year=int(year), month=int(month), day=int(day))
+                        desired_time = date if date else "未指定"  # 時間が指定されていない場合は"未指定"にする
+
+                        write_file(data_path3, desired_date.strftime('%Y/%m/%d') + ' ' + desired_time)
+                        user_data["date"] = read_file(data_path3, 'str', None)
+
+                        message = f'予約内容：{user_data["activity"]} - {user_data["location"]} - {user_data["date"]}\n'
+                        budget = budget_data.get(user_data["location"], 0)
+                        message += f'予算は{budget // 10000}万円です。予約可能か確認します...'
+
+                        # 予約可能性のチェックを入れる
+                        if desired_date < start_date or desired_date > end_date:
+                            message = 'その日付は予約できません。'
+                        elif (desired_date.strftime('%Y/%m/%d'), desired_time) in booked_slots_per_location[user_data["location"]]:
+                            message = f'{desired_date.strftime("%Y/%m/%d")}の{desired_time}は予約が埋まっています。再試行します...'
+                            attempt_count += 1
+                        else:
+                            message = f'{desired_date.strftime("%Y/%m/%d")}の{desired_time}は予約可能です。'
+                            budget = budget_data.get(user_data['location'], 0)
+                            message += f'予算は{budget // 10000}万円です。'
+                            attempt_count = 0  # リトライ成功時はカウントをリセット
+
+                        # 予約不可の場合 (10回以上のリトライ)
+                        if attempt_count >= max_attempts:
+                            message = '申し訳ありません、予約できませんでした。対話を終了します。'
+                            continueFlag = False
+                            state = 1
+                            
+                    except ValueError as e:
+                        message = f'日付の解析に失敗しました: {e}'
                 else:
                     message = '正しい日付と時間を指定してください。'
-                
-                attempt_count += 1
-                                    
-                # 予約不可の場合( 10回以上のリトライ ) 
-                if attempt_count >= max_attempts:
-                    message = '申し訳ありません、予約できませんでした。対話を終了します。'
-                    continueFlag = False
 
+       
             # 状態の更新
             write_file(data_path, int(state))
             write_file(data_path4, attempt_count)
