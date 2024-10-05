@@ -235,39 +235,54 @@ def index():
             if state == 1:
                 message = 'どのアクティビティをご希望ですか？（温泉ツアー、遊園地ツアー、バスツアーから選んでください）'
                 state = 2
-            elif state == 2:
-                user_data["activity"] = input
-                if user_data["activity"] not in activity_data:
+            elif state == 2:   
+                # 課題5用　柔軟な入力を受け付ける         
+                if "温泉" | "遊園地" | "バス" not in input:
                     message = '申し訳ありません、そのアクティビティは選べません。温泉ツアー、遊園地ツアー、バスツアーから選んでください。'
                     state = 2
-                else:                    
-                    write_file(data_path1, input)
-                    user_data["activity"] = read_file(data_path1, 'str', None)                    
-                        
+                else:
+                    if '温泉' in input:
+                        user_data["activity"] = '温泉ツアー'
+                    elif '遊園地' in input:
+                        user_data["activity"] = '遊園地ツアー'
+                    elif 'バス' in input:
+                        user_data["activity"] = 'バスツアー'
+                    else:
+                        printV('Error: activity is not found')
+                    
+                    write_file(data_path1, user_data["activity"])
                     message = f'{user_data["activity"]}のどの場所をご希望ですか？'
                     printV(user_data["activity"])
-                    state = 3
-                    
+                    state = 3                  
             elif state == 3:
-                user_data["location"] = input
-                if user_data["location"] not in activity_data[user_data["activity"]]:
-                    message = '申し訳ありません、その場所は選べません。リストにある場所から選んでください。'
-                    state = 3
-                else:                    
-                    write_file(data_path2, input)
-                    user_data["location"] = read_file(data_path2, 'str', None)
-                        
+                # 課題5用　柔軟な入力を受け付ける
+                # 場所の正規表現パターンを作成
+                #'登別|有馬|別府|草津|白浜|USJ|ディズニーランド|ディズニーシー|花やしき|ひらかたパーク|中華街|黒潮市場|姫路城'
+                pattern = r'|'.join([re.escape(location) for locations in activity_data.values() for location in locations])   
+
+                # 正規表現で場所を検索
+                match_location = re.search(pattern, input)               
+
+                if match_location:
+                    user_data["location"] = match_location.group()  # マッチした場所を取得
+
+                    write_file(data_path2, user_data["location"])  # 入力をファイルに書き込む
+                    
                     message = 'ご希望の日付を教えてください。（例: 2024/10/05 AM）'
                     state = 4
+                else:
+                    message = '申し訳ありません、その場所は選べません。リストにある場所から選んでください。'
+                    state = 3
+                    
             elif state == 4:
-                
                 # 課題5用　例: 形式に関係なく動作する、年月日の正規表現を追加                                
                 # 予約可能性のチェックを入れる
                 # 日付と時間の解析
-                match = re.match(r'(\d{4})[^\d]?(\d{1,2})[^\d]?(\d{1,2})[^\d]?\s*(AM|PM|am|pm|午前|午後)', input)
-                if match and len(match.groups()) == 4:
+                match_date = re.match(r'(\d{4})[^\d]?(\d{1,2})[^\d]?(\d{1,2})[^\d]?\s*(AM|PM|am|pm|午前|午後)', input)
+                
+                if match_date and len(match_date.groups()) == 4:
                     try:
-                        year, month, day, date = match.groups()
+                        year, month, day, date = match_date.groups()
                         desired_date = datetime(year=int(year), month=int(month), day=int(day))
                         desired_time = date if date else "未指定"  # 時間が指定されていない場合は"未指定"にする
 
