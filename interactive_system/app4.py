@@ -274,16 +274,14 @@ def index():
                     desired_date = match.group(1)
                     desired_time = match.group(2)
                 
-                    if desired_date < start_date or desired_date > end_date:
-                        message = 'その日付は予約できません。'
-                    elif (desired_date.strftime('%Y/%m/%d'), desired_time) in booked_slots_per_location[user_data["location"]]:
+                    if (desired_date, desired_time) in booked_slots_per_location[user_data["location"]]:
                         message = f'{desired_date}の{desired_time}は予約が埋まっています。'
                     else:
                         message = f'{desired_date}の{desired_time}は予約可能です。'
                         budget = budget_data.get(user_data['location'], 0)
                         message += f'予算は{budget // 10000}万円です。'
                 else:
-                    message = '正しい日付と時間を指定してください。'           
+                    message = '正しい日付と時間を指定してください。'
                 
                 attempt_count += 1
                                     
