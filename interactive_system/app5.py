@@ -150,8 +150,6 @@ def write_file(filepath, content):
         printV(filepath + ' is not found!')
         printV('Error:')
 
-
-  
         
 @app.route('/', methods=['POST'])
 # DialogflowからWebhookリクエストが来るとindex()関数が呼び出される
@@ -237,7 +235,7 @@ def index():
                 state = 2
             elif state == 2:   
                 # 課題5用　柔軟な入力を受け付ける         
-                if "温泉" | "遊園地" | "バス" not in input:
+                if not any(activity in input for activity in ["温泉", "遊園地", "バス"]):
                     message = '申し訳ありません、そのアクティビティは選べません。温泉ツアー、遊園地ツアー、バスツアーから選んでください。'
                     state = 2
                 else:
