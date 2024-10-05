@@ -36,6 +36,7 @@ attempt_count = 0
 start_date = datetime(2022, 3, 1)
 end_date = datetime(2022, 4, 30)
 
+
 # 予約可能なスロットの生成関数
 # 予約可能スロットの生成関数（ルールに基づく）
 def generate_slots_with_rules(start_date, end_date, activity):
@@ -139,9 +140,17 @@ def read_file(filepath, type, initial_value=None):
             w.write(str(initial_value)) # 初期化
             return initial_value
 
-def write_file(filepath, content):
-    with open(filepath, mode='w', encoding='utf-8') as w:
-        w.write(str(content))
+def write_file(filepath, content): 
+    if glob.glob(filepath):  # .txtが見つかった場合
+        printV(filepath + ' is found!')
+        with open(filepath, mode='w', encoding='utf-8') as w:
+            w.write(str(content))
+            return content
+    else:  # .txtが見つからなかった場合
+        printV(filepath + ' is not found!')
+        printV('Error:')
+
+
   
         
 @app.route('/', methods=['POST'])
@@ -231,15 +240,9 @@ def index():
                 if user_data["activity"] not in activity_data:
                     message = '申し訳ありません、そのアクティビティは選べません。温泉ツアー、遊園地ツアー、バスツアーから選んでください。'
                     state = 2
-                else:
-                    if glob.glob(data_path1):  # activity.txtが見つかった場合
-                        printV(data_path1 + ' is found!')
-                        with open(data_path1, mode='w', encoding='utf-8') as w:
-                            w.write(input)
-                        user_data["activity"] = input
-                    else:  # activity.txtが見つらなかった場合
-                        printV(data_path1 + ' is not saved!')
-                        state = 1
+                else:                    
+                    write_file(data_path1, input)
+                    user_data["activity"] = read_file(data_path1, 'str', None)                    
                         
                     message = f'{user_data["activity"]}のどの場所をご希望ですか？'
                     printV(user_data["activity"])
@@ -250,29 +253,15 @@ def index():
                 if user_data["location"] not in activity_data[user_data["activity"]]:
                     message = '申し訳ありません、その場所は選べません。リストにある場所から選んでください。'
                     state = 3
-                else:
-                    
-                    if glob.glob(data_path2):  # location.txtが見つかった場合
-                        printV(data_path2 + ' is found!')
-                        with open(data_path2, mode='w', encoding='utf-8') as w:
-                            w.write(input)
-                        user_data["location"] = input
-                    else:  # location.txtが見つらなかった場合
-                        printV(data_path2 + ' is not saved!')
-                        state = 1
+                else:                    
+                    write_file(data_path2, input)
+                    user_data["location"] = read_file(data_path2, 'str', None)
                         
                     message = 'ご希望の日付を教えてください。（例: 2024/10/05 AM）'
                     state = 4
             elif state == 4:
-                user_data["date"] = input
-                if glob.glob(data_path3):  # date.txtが見つかった場合
-                    printV(data_path3 + ' is found!')
-                    with open(data_path3, mode='w', encoding='utf-8') as w:
-                        w.write(input)
-                    user_data["date"] = input
-                else:  # date.txtが見つらなかった場合
-                    printV(data_path3 + ' is not saved!')
-                    state = 1
+                write_file(data_path3, input)
+                user_data["date"] = read_file(data_path3, 'str', None)
                         
                 message = f'予約内容：{user_data["activity"]} - {user_data["location"]} - {user_data["date"]}\n'
                 budget = budget_data.get(user_data["location"], 0)
@@ -302,12 +291,9 @@ def index():
                     continueFlag = False
 
             # 状態の更新
-            with open(data_path, mode='w', encoding='utf-8') as w:
-                w.write(str(state))
+            write_file(data_path, int(state))
+            write_file(data_path4, attempt_count)
             
-            with open(data_path, mode='w', encoding='utf-8') as w:
-                w.write(str(attempt_count))
-
     # Webhookレスポンスの作成
     response = makeResponse(message, continueFlag)
     return json.dumps(response)
