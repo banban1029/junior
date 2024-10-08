@@ -124,6 +124,18 @@ for activity, locations in activity_data.items():
         elif activity == "バスツアー":
             booked_slots_per_location[location] = generate_booked_slots(available_slots, 0.2)
 
+# スロットをファイルに保存する関数
+def save_slots_to_file(file_name, booked_slots_per_location):
+    with open(file_name, 'w') as f:
+        json.dump(booked_slots_per_location, f, ensure_ascii=False, indent=4)
+
+
+# スロットをファイルから読み込む関数
+def load_slots_from_file(file_name):
+    with open(file_name, 'r') as f:
+        return json.load(f)
+
+
 
 # ユーティリティ関数を追加
 def read_file(filepath, type, initial_value=None):
@@ -174,6 +186,7 @@ def index():
         data_path2 = os.getcwd() + '/location.txt'
         data_path3 = os.getcwd() + '/date.txt'
         data_path4 = os.getcwd() + '/attempt_count.txt'
+        data_path5 = os.getcwd() + '/booked_slots.txt'
         
         # index関数内のファイル読み書きのリファクタリング
         state = read_file(data_path, 'int', 1)
@@ -181,6 +194,17 @@ def index():
         user_data["location"] = read_file(data_path2, 'str', None)
         user_data["date"] = read_file(data_path3, 'str', None)
         attempt_count = read_file(data_path4, 'int', 0)
+
+        # 予約始まってから、固定させる。
+        if(state == 1):
+            save_slots_to_file(date_path5, booked_slots_per_location)
+    
+        # スロットを読み込む
+        booked_slots_per_location = {}
+        booked_slots_per_location = load_slots_from_file(data_path5)
+
+        # 読み込んだデータを確認
+        printV(booked_slots_per_location)
         
         ###########################################################
         
