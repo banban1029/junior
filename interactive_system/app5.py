@@ -37,8 +37,7 @@ start_date = datetime(2022, 3, 1)
 end_date = datetime(2022, 4, 30)
 
 
-# 予約可能なスロットの生成関数
-# 予約可能スロットの生成関数（ルールに基づく）
+# 稼働日の取得
 def generate_slots_with_rules(start_date, end_date, activity):
     available_slots = []
     current_date = start_date
@@ -85,6 +84,7 @@ def generate_booked_slots(available_slots, rate):
 available_slots_per_location = {}
 booked_slots_per_location = {}
 
+# 予約可能スロットの生成
 for activity, locations in activity_data.items():
     for location in locations:
         # スロットを生成
@@ -135,6 +135,34 @@ def load_slots_from_file(file_name):
     with open(file_name, 'r') as f:
         return json.load(f)
 
+# 予約スケジュールの可視化関数
+def print_booked_slots(booked_slots_per_location, available_slots_per_location, activity_data):
+    for activity, locations in activity_data.items():
+        print(f"アクティビティ: {activity}")
+        print("=" * 40)
+        for location in locations:
+            print(f"場所: {location}")
+            print("-" * 30) # アクティビティの区切り線を追加
+            # 予約済みスロットの出力
+            print("予約済みスロット:")
+            booked_slots = booked_slots_per_location.get(location, [])
+            if booked_slots:
+                for slot in booked_slots:
+                    date, time = slot
+                    print(f"  日付: {date}, 時間帯: {time}")
+            else:
+                print("  予約済みスロットはありません。")
+            # 予約可能スロットの出力
+            print("\n予約可能スロット:")
+            available_slots = available_slots_per_location.get(location, [])
+            if available_slots:
+                for slot in available_slots:
+                    date, time = slot
+                    if slot not in booked_slots:
+                        print(f"  日付: {date}, 時間帯: {time}")
+            else:
+                print("  予約可能なスロットはありません。")
+            print("\n" + "=" * 30 + "\n")
 
 
 # ユーティリティ関数を追加
@@ -181,7 +209,6 @@ def index():
         
         # 状態(state)の取得
         data_path = os.getcwd() + '/state.txt'
-        data_path0 = os.getcwd() + '/scheduled.txt'
         data_path1 = os.getcwd() + '/activity.txt'
         data_path2 = os.getcwd() + '/location.txt'
         data_path3 = os.getcwd() + '/date.txt'
@@ -197,52 +224,14 @@ def index():
 
         # 予約始まってから、固定させる。
         if(state == 1):
-            save_slots_to_file(date_path5, booked_slots_per_location)
+            save_slots_to_file(data_path5, booked_slots_per_location)
     
         # スロットを読み込む
         booked_slots_per_location = {}
         booked_slots_per_location = load_slots_from_file(data_path5)
 
         # 読み込んだデータを確認
-        printV(booked_slots_per_location)
-        
-        ###########################################################
-        
-        # 状態ファイルの確認
-        # schedule.txtがHerokuサーバ上にあるかチェック
-        # 予約スロットリストをアクティビティごとに schedule.txt に書き込む
-        with open(data_path0, mode='w', encoding='utf-8') as f:
-            for activity, locations in activity_data.items():
-                    f.write(f"アクティビティ: {activity}\n")
-                    f.write("=" * 40 + "\n")  # アクティビティの区切り線を追加
-                    for location in locations:
-                        f.write(f"場所: {location}\n")
-                        f.write("-" * 30 + "\n")  # 場所の区切り線を追加
-                        # 予約済みスロットの出力
-                        f.write("予約済みスロット:\n")
-                        booked_slots = booked_slots_per_location.get(location, [])
-                        if booked_slots:
-                            for slot in booked_slots:
-                                date, time = slot
-                                f.write(f"  日付: {date}, 時間帯: {time}\n")  # 見やすい形式で出力
-                        else:
-                            f.write("  予約済みスロットはありません。\n")
-                        f.write("\n")
-                        # 予約可能スロットの出力
-                        f.write("予約可能スロット:\n")
-                        available_slots = available_slots_per_location.get(location, [])
-                        if available_slots:
-                            for slot in available_slots:
-                                date, time = slot
-                                if slot not in booked_slots:  # 予約済みでないスロットのみ表示
-                                    f.write(f"  日付: {date}, 時間帯: {time}\n")
-                        else:
-                            f.write("  予約可能なスロットはありません。\n")
-                        f.write("\n" + "=" * 30 + "\n\n")  # 場所ごとの区切り線を追加    
-                                        
-        with open(data_path0, mode='r', encoding='utf-8') as f:
-            content = f.read()  # ファイルの内容を読み取る
-            printV(content)  # ファイルの内容を出力 
+        print_booked_slots(booked_slots_per_location, available_slots_per_location, activity_data)
             
         ###########################################################
         
