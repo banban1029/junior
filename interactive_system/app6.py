@@ -396,7 +396,7 @@ def index():
                         desired_date = datetime(year=int(year), month=int(month), day=int(day))
                         
                         date_time  = []
-                        date_time.append((user_data["date"].strftime("%Y/%m/%d"), user_data["time"]))
+                        date_time.append((user_data["date"], user_data["time"]))
                         
                         printV("\n\n")
                         printV(booked_slots_per_location[user_data["location"]])
