@@ -297,6 +297,7 @@ def index():
 
                         message = 'ご希望の日付を教えてください。（例: 2023/04/02 AM）'
                         state = 4  # 日時入力ステップへ進む
+                        printV(booked_slots_per_location[user_data["location"]])
 
                 elif match_activity:
                     # アクティビティのみ入力された場合
@@ -349,6 +350,7 @@ def index():
                     write_file(data_path2, user_data["location"])  # 場所をファイルに書き込む
                     message = 'ご希望の日付を教えてください。（例: 2023/04/02 AM）'
                     state = 4  # 日時入力ステップへ進む
+                    printV(booked_slots_per_location[user_data["location"]])
                 else:
                     message = '申し訳ありません、その場所は選べません。リストにある場所から選んでください。'
                     state = 3 # 場所入力ステップへ戻る
@@ -386,6 +388,7 @@ def index():
                 else:
                     message = '正しい日付と時間を指定してください。'
                     state = 4 # 日時入力ステップへ戻る
+                    printV(booked_slots_per_location[user_data["location"]])
 
             elif state == 5:
                 if input == 'はい': 
@@ -408,7 +411,10 @@ def index():
                         # 予約可能性のチェックを入れる
                         if desired_date < start_date or desired_date > end_date:
                             message = 'その日付は予約できません。'
-                        elif date_time in booked_slots_per_location[user_data["location"]]:
+                        
+                        # date_time のすべての要素が location_time に含まれているかどうかを確認
+                        # error例：elif date_time in booked_slots_per_location[user_data["location"]]: 
+                        elif all(item in booked_slots_per_location for item in date_time):   
                             message = f'{user_data["date"]}の{user_data["time"]}は予約が埋まっています。申し訳ございませ。他の日程ではどうでしょう...\n'
                             state = 4
                             attempt_count += 1
