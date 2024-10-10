@@ -6,14 +6,17 @@ import random
 from datetime import datetime, timedelta
 import re
 
+# Flaskの初期化
 app = Flask(__name__)
 
-# 予約可能なスロットの生成
+# 環境変数設定
 start_date = datetime(2022, 3, 1)
 end_date = datetime(2022, 4, 30)
 available_slots = []
+booked_slots = []
 
-# 日付を生成し、各日付にAMとPMを追加 "YYYY/MM/DD", "AM"
+# 日程を生成し、各日付にAMとPMを追加 
+# ("YYYY/MM/DD", "AM") or ("YYYY/MM/DD", "PM")
 current_date = start_date
 while current_date <= end_date:
     available_slots.append((current_date.strftime("%Y/%m/%d"), "AM"))
@@ -21,23 +24,20 @@ while current_date <= end_date:
     current_date += timedelta(days=1)
     
 # ランダムに50%のスロットを予約済みとして設定
-booked_slots = []
 booked_count = int(len(available_slots) * 0.5)
 booked_slots = random.sample(available_slots, booked_count)
-
-# 予約済みスロットの表示
-print("予約済みスロット:", booked_slots)
 
 @app.route('/', methods=['POST'])
 def index():
     # DialogflowからWebhookリクエストが来るとindex()関数が呼び出される
+    # Google Assistantが音声入力をキャッチしたメッセージを取得し、input変数に代入
     input = request.json["queryResult"]["parameters"]["any"]
     printV('Received: ' + input)
 
-    # 日時の希望を正規表現で取得 "2022/03/01 午前"
+    # 日程の希望を正規表現で取得 "2022/03/01 AM"
     match = re.search(r'(\d{4}/\d{1,2}/\d{1,2})\s*(AM|PM)', input)
     
-    if match:
+    if match:  # 正規表現にマッチした場合
         desired_date = match.group(1)  # "YYYY/MM/DD"
         desired_time = match.group(2)  # "AM" or "PM"
 
@@ -50,7 +50,10 @@ def index():
         message = "正しい日付と時間を指定してください。"
 
     # Dialogflow(Firebase)へのWebhookレスポンス作成
-    response = makeResponse(message, continueFlag=False)  # 会話は1ターンのみのやりとりなのでFalse
+    # 会話は1ターンのみのやりとりなのでFalse
+    response = makeResponse(message, continueFlag=False)
+    
+    # Webhookレスポンス送信 
     return json.dumps(response)
 
 # Webhookレスポンスの作成(JSON形式)

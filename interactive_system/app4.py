@@ -7,21 +7,24 @@ import random
 from datetime import datetime, timedelta
 import re
 
+# Flaskの初期化
 app = Flask(__name__)
 
-# 初期化用のデータ
+# activity_dataの読み込み
 activity_data = {
     "温泉ツアー": ["登別", "有馬", "別府", "草津", "白浜"],
     "遊園地ツアー": ["USJ", "ディズニーランド", "ディズニーシー", "花やしき", "ひらかたパーク"],
     "バスツアー": ["中華街", "黒潮市場", "姫路城"]
 }
+
+# budget_dataの読み込み
 budget_data = {
     "登別": 130000, "有馬": 50000, "別府": 100000, "草津": 70000, "白浜": 50000,
     "USJ": 30000, "ディズニーランド": 50000, "ディズニーシー": 50000, "花やしき": 40000, "ひらかたパーク": 10000,
     "中華街": 15500, "黒潮市場": 15500, "姫路城": 10000
 }
 
-# ユーザがどの項目を入力したかを追跡するための変数を初期化
+# user_dataの初期化
 user_data = {
     "activity": None,
     "location": None,
@@ -35,7 +38,6 @@ attempt_count = 0
 # 予約可能なスロットの生成
 start_date = datetime(2022, 3, 1)
 end_date = datetime(2022, 4, 30)
-
 
 # 稼働日の取得
 def generate_slots_with_rules(start_date, end_date, activity):
@@ -194,60 +196,64 @@ def write_file(filepath, content):
 @app.route('/', methods=['POST'])
 # DialogflowからWebhookリクエストが来るとindex()関数が呼び出される
 def index():
-    global attempt_count
+    # DialogflowからWebhookリクエストが来るとindex()関数が呼び出される
     # Google Assistantが音声入力をキャッチしたメッセージを取得し、input変数に代入
+    global attempt_count
+    
     input = request.json["queryResult"]["parameters"]["any"]
     printV('Received: ' + input)
+    
+    ######################################################################################
+    # メッセージの初期化
+    message = ''
+    continueFlag = True
+    
+    # dataパスの取得
+    data_path = os.getcwd() + '/state.txt' # 状態を保存用
+    data_path1 = os.getcwd() + '/activity.txt' # アクティビティを保存用
+    data_path2 = os.getcwd() + '/location.txt' # 場所を保存用
+    data_path3 = os.getcwd() + '/itinerary.txt' # 日時を保存用
+    data_path4 = os.getcwd() + '/attempt_count.txt' # 予約可能性のチェックのためのカウンタ
+    data_path5 = os.getcwd() + '/available_slots.txt' # 予算を保存用
+    
+    # data所得
+    state = read_file(data_path, 'int', 1)
+    user_data["activity"] = read_file(data_path1, 'str', None)
+    user_data["location"] = read_file(data_path2, 'str', None)
+    user_data["date"] = read_file(data_path3, 'str', None)
+    attempt_count = read_file(data_path4, 'int', 0)
+    
+    # 予約始まってから、固定させる。
+    if(state == 1):
+        global booked_slots_per_location
+        save_slots_to_file(data_path5, booked_slots_per_location)
+
+    # スロットを読み込む
+    booked_slots_per_location = {}
+    booked_slots_per_location = load_slots_from_file(data_path5)
+    # 読み込んだデータを確認
+    print_booked_slots(booked_slots_per_location, available_slots_per_location, activity_data)
+
+    ######################################################################################  
     
     if input == 'バイバイ':  # 会話を終了するメッセージ「バイバイ」を受け取った場合
         message = 'さようなら'
         continueFlag = False
     else:  # 通常のメッセージを受け取った場合
-        
-        message = ''
-        continueFlag = True
-        
-        # 状態(state)の取得
-        data_path = os.getcwd() + '/state.txt'
-        data_path1 = os.getcwd() + '/activity.txt'
-        data_path2 = os.getcwd() + '/location.txt'
-        data_path3 = os.getcwd() + '/itinerary.txt'
-        data_path4 = os.getcwd() + '/attempt_count.txt'
-        data_path5 = os.getcwd() + '/booked_slots.txt'
-        
-        # index関数内のファイル読み書きのリファクタリング
-        state = read_file(data_path, 'int', 1)
-        user_data["activity"] = read_file(data_path1, 'str', None)
-        user_data["location"] = read_file(data_path2, 'str', None)
-        # 日時の読み込み (YYYY/MM/DD time 形式)、 内容をトリミングして空白で分割
-        user_data["date"] = read_file(data_path3, 'str', None)
-        attempt_count = read_file(data_path4, 'int', 0)
-        
-        # 予約始まってから、固定させる。
-        if(state == 1):
-            global booked_slots_per_location
-            save_slots_to_file(data_path5, booked_slots_per_location)
-    
-        # スロットを読み込む
-        booked_slots_per_location = {}
-        booked_slots_per_location = load_slots_from_file(data_path5)
-
-        # 読み込んだデータを確認
-        print_booked_slots(booked_slots_per_location, available_slots_per_location, activity_data)
-
+       
         ###########################################################
-        
         if input == 'リセット':  # 状態をリセットする場合
-            with open(data_path, mode='w', encoding='utf-8') as w:
-                # state.txtに[1]を上書き
-                w.write('1')
-                message = '状態をリセットしました'
-                continueFlag = False
+            state = 1
+            message = '状態をリセットしました'
+            continueFlag = False
+        ###########################################################
         else:             
             # 状態に応じて異なる発話を生成
             if state == 1:
                 message = 'どのアクティビティをご希望ですか？（温泉ツアー、遊園地ツアー、バスツアーから選んでください）'
                 state = 2
+                
+            # activityの選択
             elif state == 2:
                 user_data["activity"] = input
                 if user_data["activity"] not in activity_data:
@@ -256,7 +262,9 @@ def index():
                 else:                      
                     write_file(data_path1, user_data["activity"])  # アクティビティをファイルに書き込む                 
                     message = f'{user_data["activity"]}のどの場所をご希望ですか？'
-                    state = 3      
+                    state = 3  
+                    
+            # locationの選択    
             elif state == 3:
                 user_data["location"] = input
                 if user_data["location"] not in activity_data[user_data["activity"]]:
@@ -266,6 +274,8 @@ def index():
                     write_file(data_path2, user_data["location"])  
                     message = 'ご希望の日付を教えてください。（例: 2024/10/05 AM）'
                     state = 4
+                    
+            # dateの選択
             elif state == 4:
                 user_data["date"] = input
                 write_file(data_path3, user_data["date"])
@@ -274,6 +284,7 @@ def index():
                 message += f'予算は{budget // 10000}万円です。こちらでよろしいですか？ (はい/いいえ)'
                 state = 5
                 
+            # 予約の確認
             elif state == 5:
                 if input == 'はい':
                     # 予約可能性のチェックを入れる
@@ -314,9 +325,9 @@ def index():
                     message = '予約希望を取り消しました。もう一度入力してください'
                     state = 1
 
-            # 状態の更新
-            write_file(data_path, int(state))
-            write_file(data_path4, attempt_count)
+    # 状態の更新
+    write_file(data_path, int(state))
+    write_file(data_path4, attempt_count)
             
     # Webhookレスポンスの作成
     response = makeResponse(message, continueFlag)

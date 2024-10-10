@@ -3,6 +3,7 @@ import json
 import os
 import inspect
 
+# Flaskの初期化
 app = Flask(__name__)
 
 @app.route('/', methods=['POST'])
@@ -12,23 +13,26 @@ def index():
     input = request.json["queryResult"]["parameters"]["any"]
     printV('Received: ' + input)
     
-    # 認識可能なアクティビティを辞書として定義
+    # 認識可能なactivityを辞書として定義
     activities = {
         "温泉ツアー": "温泉ツアーですね",
         "遊園地ツアー": "遊園地ツアーですね",
         "バスツアー": "バスツアーですね"
     }
 
-    # 入力されたアクティビティが辞書に存在するかを確認
+    # 入力されたactivityが辞書に存在するかを確認
     if input in activities:
-        # 辞書に一致するアクティビティがあれば、対応するメッセージを返す
+        # 辞書に一致するactivityがあれば、対応するメッセージを返す
         message = activities[input]
     else:
-        # 一致するアクティビティがなければ、エラーメッセージを返す
+        # 一致するactivityがなければ、エラーを返す
         message = "そのサービスはありません"
     
     # Dialogflow(Firebase)へのWebhookレスポンス作成
-    response = makeResponse(message, continueFlag= False) # 会話は1ターンのみのやりとりなのでFalse
+    # 会話は1ターンのみのやりとりなのでFalse
+    response = makeResponse(message, continueFlag= False) 
+    
+    # Webhookレスポンス送信
     return json.dumps(response)
 
 # Webhookレスポンスの作成(JSON形式)

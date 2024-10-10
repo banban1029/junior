@@ -3,6 +3,7 @@ import json
 import os
 import inspect
 
+# Flaskの初期化
 app = Flask(__name__)
 
 @app.route('/', methods=['POST'])
@@ -25,16 +26,20 @@ def index():
     if input == 'バイバイ':
         message = 'さようなら'
         continueFlag = False
+        
     # ユーザの入力に応じて返答を決定
     elif input in res_map:  # 定型的な返答がある場合
         message = res_map[input]
         continueFlag = True
-    else:  # 通常のメッセージを受け取った場合
+        
+    # 通常のメッセージを受け取った場合
+    else:  
         message = f'{input}と言いましたね'
         continueFlag = True
 
     # Dialogflow(Firebase)へのWebhookレスポンス作成
     response = makeResponse(message, continueFlag)
+    
     # Webhookレスポンス送信
     return json.dumps(response)
 

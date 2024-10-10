@@ -22,7 +22,7 @@ activity_data = {
     "バスツアー": ["中華街", "黒潮市場", "姫路城"]
 }
 
-# 予算データの読み込み
+# budget_dataの読み込み
 budget_data = {
     "登別": 130000, "有馬": 50000, "別府": 100000, "草津": 70000, "白浜": 50000,
     "USJ": 30000, "ディズニーランド": 50000, "ディズニーシー": 50000, "花やしき": 40000, "ひらかたパーク": 10000,
@@ -34,12 +34,12 @@ user_data = {
     "activity": None,
     "location": None,
     "date": None,
-    "time": None
+    "time": None # 課題5　時間の追加 (より柔軟な入力を受け付ける)
 }
 
 @app.route('/', methods=['POST'])
-# DialogflowからWebhookリクエストが来るとindex()関数が呼び出される
 def index():
+    # DialogflowからWebhookリクエストが来るとindex()関数が呼び出される
     # Google Assistantが音声入力をキャッチしたメッセージを取得し、input変数に代入
     input = request.json["queryResult"]["parameters"]["any"]
     printV('Received: ' + input)
@@ -63,7 +63,7 @@ def index():
     state = read_file(data_path, 'int', 1)
     user_data["activity"] = read_file(data_path1, 'str', None)
     user_data["location"] = read_file(data_path2, 'str', None)
-    # 日程所得 ("YYYY/MM/DD TIME" 形式)、 空白でトリミングして分割
+    # 課題5 日程所得 ("YYYY/MM/DD TIME" 形式)、 空白でトリミングして分割
     user_data["date"], user_data["time"] = read_file(data_path3, 'str', "None None").strip().split()  
     attempt_count = read_file(data_path4, 'int', 0)
     error_recovery = read_file(data_path7, 'int', 0)
@@ -123,6 +123,9 @@ def index():
             if state == 1:
                 message = 'どのアクティビティをご希望ですか？\n'
                 state = 2
+                error_recovery = 0  # エラー回復カウンタをリセット
+            
+            # activity選択
             elif state == 2:   
                 # 課題5　柔軟な入力を受け付ける(正規表現)
                 # 複数入力、keyword抽出
@@ -209,7 +212,7 @@ def index():
                     state = 2  # activity入力ステップへ戻る
                     error_recovery += 1 # エラー回復カウンタを+1
                                 
-                           
+            # locationの選択              
             elif state == 3:
                 # 課題5　柔軟な入力を受け付ける(正規表現)
                 # 複数入力、keyword抽出
@@ -280,7 +283,8 @@ def index():
                                     
                     state = 3 # 場所入力ステップへ戻る
                     error_recovery += 1  # エラー回復カウンタをリセット
-                    
+            
+            # date, timeの選択    
             elif state == 4:
                 # 課題5　例: 形式に関係なく動作する、年月日の正規表現を追加                                
                 pattern_date = r'(\d{4})[^\d]?(\d{1,2})[^\d]?(\d{1,2})[^\d]?'  
@@ -322,6 +326,7 @@ def index():
                     state = 4 # 日時入力ステップへ戻る
                     error_recovery += 1 # エラー回復カウンタをリセット
 
+            # 予約内容の確認
             elif state == 5:
                 
                 if input == 'はい': 
@@ -381,10 +386,11 @@ def index():
                     state = 1
                 
        
-            # 状態の更新
-            write_file(data_path, int(state))
-            write_file(data_path7, int(error_recovery))
-            write_file(data_path4, attempt_count)
+    # 状態の更新
+    write_file(data_path, int(state))
+    write_file(data_path4, attempt_count)
+    write_file(data_path7, int(error_recovery))
+    
             
     # Webhookレスポンスの作成
     response = makeResponse(message, continueFlag)
