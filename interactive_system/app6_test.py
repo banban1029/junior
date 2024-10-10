@@ -13,7 +13,7 @@ app = Flask(__name__)
 # 環境変数設定
 start_date = datetime(2022, 3, 1) # 予約開始期間
 end_date = datetime(2022, 4, 30) # 予約終了期間
-max_attempts = 10 # 予約不可の場合のリトライ回数
+
 
 # activity_dataの読み込み
 activity_data = {
@@ -55,8 +55,9 @@ def index():
     data_path2 = os.getcwd() + '/location.txt' # 場所を保存用
     data_path3 = os.getcwd() + '/itinerary.txt' # 日時を保存用
     data_path4 = os.getcwd() + '/attempt_count.txt' # 予約可能性のチェックのためのカウンタ
-    data_path5 = os.getcwd() + '/booked_slots.txt'  # 予約済みスロットを保存用
-    data_path6 = os.getcwd() + '/error_recovery.txt' # エラー回避援助のためのカウンタ
+    data_path5 = os.getcwd() + '/available_slots.txt' # 予算を保存用
+    data_path6 = os.getcwd() + '/booked_slots.txt'  # 予約済みスロットを保存用
+    data_path7 = os.getcwd() + '/error_recovery.txt' # エラー回避援助のためのカウンタ
     
     # data所得
     state = read_file(data_path, 'int', 1)
@@ -65,23 +66,32 @@ def index():
     # 日程所得 ("YYYY/MM/DD TIME" 形式)、 空白でトリミングして分割
     user_data["date"], user_data["time"] = read_file(data_path3, 'str', "None None").strip().split()  
     attempt_count = read_file(data_path4, 'int', 0)
-    error_recovery = read_file(data_path6, 'int', 0)
+    error_recovery = read_file(data_path7, 'int', 0)
     budget = budget_data.get(user_data["location"], 0)
     
     # 初期状態の場合、予約状況スロットを生成
     if(state == 1):
-        booked_slots = distribution_slots()
+        available_slots, booked_slots = distribution_slots()
         # 予約状況をファイルに保存
-        save_slots_to_file(data_path5, booked_slots)
+        save_slots_to_file(data_path5, available_slots)
+        save_slots_to_file(data_path6, booked_slots)
+        
         # 読み込んだデータを確認
         print_booked_slots(booked_slots, available_slots, activity_data)
         
     # 予約スロット生成（ルール適用）および予約状況の管理
     available_slots = {}
     booked_slots = {}
-    # スロットを読み込む
-    booked_slots = load_slots_from_file(data_path5)
     
+    # スロットを読み込む
+    available_slots = load_slots_from_file(data_path5)
+    booked_slots = load_slots_from_file(data_path6)
+    
+    printV(available_slots)
+    printV(booked_slots)
+    
+    # リトライ回数の設定
+    max_attempts = 10 
     ######################################################################################
     
     if input == 'バイバイ':  # 会話を終了するメッセージ「バイバイ」を受け取った場合
@@ -373,7 +383,7 @@ def index():
        
             # 状態の更新
             write_file(data_path, int(state))
-            write_file(data_path6, int(error_recovery))
+            write_file(data_path7, int(error_recovery))
             write_file(data_path4, attempt_count)
             
     # Webhookレスポンスの作成
@@ -523,7 +533,7 @@ def distribution_slots():
                 # 平日:予約済み割合0.2
                 booked_slots[location] = generate_booked_slots(available_slots[location], 0.2)
   
-    return booked_slots
+    return available_slots, booked_slots
 
 # スロットをファイルに保存する関数
 def save_slots_to_file(file_name, booked_slots_per_location):
