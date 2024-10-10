@@ -25,8 +25,7 @@ budget_data = {
 user_data = {
     "activity": None,
     "location": None,
-    "date": None,
-    "time": None
+    "date": None
 }
 
 # 予約可能性のチェックのためのカウンタ, 10回超えたら予約不可
@@ -221,7 +220,7 @@ def index():
         user_data["activity"] = read_file(data_path1, 'str', None)
         user_data["location"] = read_file(data_path2, 'str', None)
         # 日時の読み込み (YYYY/MM/DD time 形式)、 内容をトリミングして空白で分割
-        user_data["date"], user_data["time"] = read_file(data_path3, 'str', "None None").strip().split()  
+        user_data["date"] = read_file(data_path3, 'str', None)
         attempt_count = read_file(data_path4, 'int', 0)
         
         # 予約始まってから、固定させる。
@@ -279,20 +278,19 @@ def index():
                 if input == 'はい':
                     # 予約可能性のチェックを入れる
                     # 日付と時間の解析 
-                    
+                    # user_data["date"] = "2022/03/01 AM"
                     match = re.search(r'(\d{4}/\d{1,2}/\d{1,2})\s*(AM|PM)', user_data["date"])
+                    desired_date = match.group(1)
+                    desired_time = match.group(2)
+                    date_time  = []
+                    date_time.append([desired_date, desired_time])
                     
                     if match:
-                        desired_date = match.group(1)
-                        desired_time = match.group(2)
-                        date_time  = []
-                        date_time.append([desired_date, desired_time])
-                        
                         year, month, day = map(int, desired_date.split('/'))
                         desired_date = datetime(year=int(year), month=int(month), day=int(day))
                         
                         if desired_date < start_date or desired_date > end_date:
-                            message = 'その日付は予約できません。'
+                            message = 'その日付は予約できません。もう一度入力してください'
                             state = 4
                         elif all(item in booked_slots_per_location[user_data["location"]] for item in date_time):
                             message = f'{user_data["date"]}は予約が埋まっています。'
@@ -303,13 +301,14 @@ def index():
                             budget = budget_data.get(user_data['location'], 0)
                             message += f'予算は{budget // 10000}万円です。'
                     else:
-                        message = "正しい日付と時間を指定してください。"
+                        message = "正しい日付時間形式で入力してください。例: 2022/03/01 AM"
                         state = 4
                                             
                     # 予約不可の場合( 10回以上のリトライ ) 
                     if attempt_count >= max_attempts:
                         message = '申し訳ありません、予約できませんでした。対話を終了します。'
                         continueFlag = False
+                        state = 1
                         
                 elif input == "いいえ":
                     message = '予約希望を取り消しました。もう一度入力してください'
