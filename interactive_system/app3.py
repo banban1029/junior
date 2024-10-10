@@ -21,8 +21,9 @@ while current_date <= end_date:
     current_date += timedelta(days=1)
     
 # ランダムに50%のスロットを予約済みとして設定
-number_of_booked_slots = len(available_slots) // 2
-booked_slots = random.sample(available_slots, number_of_booked_slots)
+booked_slots = []
+booked_count = int(len(available_slots) * 0.5)
+booked_slots = random.sample(available_slots, booked_count)
 
 # 予約済みスロットの表示
 print("予約済みスロット:", booked_slots)
@@ -34,7 +35,7 @@ def index():
     printV('Received: ' + input)
 
     # 日時の希望を正規表現で取得 "2022/03/01 午前"
-    match = re.search(r'(\d{4}/\d{1,2}/\d{1,2})\s*(午前|午後)', input)
+    match = re.search(r'(\d{4}/\d{1,2}/\d{1,2})\s*(AM|PM)', input)
     
     if match:
         desired_date = match.group(1)  # "YYYY/MM/DD"
