@@ -16,19 +16,23 @@ def index():
     res_map = {
         'こんにちは': 'こんにちは！お元気ですか？',
         'おはよう': 'おはようございます！今日は何をしますか？',
+        'おはよう': 'おはようございます！今日は何をしますか？',
         'ありがとう': 'どういたしまして！',
         'おやすみ': 'おやすみ～いい夢を',
         'ごめんね': '気にしないでください！',
-        'おはよう': 'おはよう！'
     }
+    
+    # 会話を終了するメッセージ「バイバイ」を受け取った場合
+    if input == 'バイバイ':
+        message = 'さようなら'
+        continueFlag = False
+        response = makeResponse(message, continueFlag)
+        return json.dumps(response)
 
     # ユーザの入力に応じて返答を決定
     if input in res_map:  # 定型的な返答がある場合
         message = res_map[input]
         continueFlag = True
-    elif input == 'バイバイ':  # 会話を終了するメッセージ「バイバイ」を受け取った場合
-        message = 'さようなら'
-        continueFlag = False
     else:  # 通常のメッセージを受け取った場合
         message = f'{input}と言いましたね'
         continueFlag = True
