@@ -25,7 +25,8 @@ budget_data = {
 user_data = {
     "activity": None,
     "location": None,
-    "date": None
+    "date": None,
+    "time": None
 }
 
 # 予約可能性のチェックのためのカウンタ, 10回超えたら予約不可
@@ -211,7 +212,7 @@ def index():
         data_path = os.getcwd() + '/state.txt'
         data_path1 = os.getcwd() + '/activity.txt'
         data_path2 = os.getcwd() + '/location.txt'
-        data_path3 = os.getcwd() + '/date.txt'
+        data_path3 = os.getcwd() + '/itinerary.txt'
         data_path4 = os.getcwd() + '/attempt_count.txt'
         data_path5 = os.getcwd() + '/booked_slots.txt'
         
@@ -219,8 +220,10 @@ def index():
         state = read_file(data_path, 'int', 1)
         user_data["activity"] = read_file(data_path1, 'str', None)
         user_data["location"] = read_file(data_path2, 'str', None)
-        user_data["date"] = read_file(data_path3, 'str', None)
+        # 日時の読み込み (YYYY/MM/DD time 形式)、 内容をトリミングして空白で分割
+        user_data["date"], user_data["time"] = read_file(data_path3, 'str', "None None").strip().split()  
         attempt_count = read_file(data_path4, 'int', 0)
+        
 
         # 予約始まってから、固定させる。
         if(state == 1):
@@ -248,73 +251,185 @@ def index():
                 message = 'どのアクティビティをご希望ですか？（温泉ツアー、遊園地ツアー、バスツアーから選んでください）'
                 state = 2
             elif state == 2:   
-                # 課題5用　柔軟な入力を受け付ける         
-                if not any(activity in input for activity in ["温泉", "遊園地", "バス"]):
-                    message = '申し訳ありません、そのアクティビティは選べません。温泉ツアー、遊園地ツアー、バスツアーから選んでください。'
-                    state = 2
-                else:
-                    if '温泉' in input:
-                        user_data["activity"] = '温泉ツアー'
-                    elif '遊園地' in input:
-                        user_data["activity"] = '遊園地ツアー'
-                    elif 'バス' in input:
-                        user_data["activity"] = 'バスツアー'
-                    else:
-                        printV('Error: activity is not found')
-                    
+                # 課題5用　柔軟な入力を受け付ける(正規表現)
+                # アクティビティの正規表現パターンを作成
+                # ユーザーの入力にアクティビティ、場所、日時が含まれているか確認
+                pattern_activity = r'(温泉|遊園地|バス)'  # アクティビティの正規表現
+                pattern_location = r'|'.join([re.escape(location) for locations in activity_data.values() for location in locations])  # 場所の正規表現
+                pattern_date = r'(\d{4})[^\d]?(\d{1,2})[^\d]?(\d{1,2})[^\d]?'  # 日付の正規表現（例: 2023/04/02）
+                pattern_time = r'(AM|PM|am|pm|午前|午後)'  # 時間帯の正規表現
+                
+                # 入力文を正規表現で解析
+                match_activity = re.search(pattern_activity, input)  # アクティビティを検索
+                match_location = re.search(pattern_location, input)  # 場所を検索
+                match_date = re.search(pattern_date, input)  # 日付を検索
+                match_time = re.search(pattern_time, input)  # 時間帯を検索
+
+                if match_activity and match_location and match_date:
+                        # アクティビティ、場所、日時すべてが含まれている場合
+                        user_data["activity"] = match_activity.group() + "ツアー"
+                        user_data["location"] = match_location.group()
+                        user_data["date"] = f"{match_date.group(1)}/{match_date.group(2).zfill(2)}/{match_date.group(3).zfill(2)}"  # YYYY/MM/DD形式でフォーマット
+                        user_data["time"] = match_time.group().upper() if match_time else ''  # AM/PMがあるか確認
+                        budget = budget_data.get(user_data["location"], 0)
+
+                        # ファイルに書き込む
+                        write_file(data_path1, user_data["activity"])  # アクティビティをファイルに書き込む
+                        write_file(data_path2, user_data["location"])  # 場所をファイルに書き込む
+                        write_file(data_path3, f'{user_data["date"]} {user_data["time"]}')  # 日時をファイルに書き込む
+
+                        # 予約内容を確認するメッセージ
+                        message = (f'予約内容は、\n'
+                                   f'アクティビティ: {user_data["activity"]}\n'
+                                   f'場所: {user_data["location"]}\n'
+                                   f'日付: {user_data["date"]} {user_data["time"]}\n'
+                                   f'予算: {budget // 10000}万円\n'
+                                   'でよろしいですか？ (はい/いいえ)')
+                        state = 5  # 予約確認ステップへ進む
+                        
+                elif match_activity and match_location:
+                        # アクティビティと場所のみ入力されている場合 -> 日時指定のステートへ進む
+                        user_data["activity"] = match_activity.group() + "ツアー"
+                        user_data["location"] = match_location.group()
+
+                        write_file(data_path1, user_data["activity"])  # アクティビティをファイルに書き込む
+                        write_file(data_path2, user_data["location"])  # 場所をファイルに書き込む
+
+                        message = 'ご希望の日付を教えてください。（例: 2023/04/02 AM）'
+                        state = 4  # 日時入力ステップへ進む
+                        printV(booked_slots_per_location[user_data["location"]])
+
+                elif match_activity:
+                    # アクティビティのみ入力された場合
+                    user_data["activity"] = match_activity.group() + "ツアー"
                     write_file(data_path1, user_data["activity"])
+            
                     message = f'{user_data["activity"]}のどの場所をご希望ですか？'
-                    printV(user_data["activity"])
-                    state = 3                  
+                    state = 3  # 場所入力ステップへ進む
+            
+                else:
+                    # 無効な入力があった場合
+                    message = '申し訳ありません、そのアクティビティは選べません。温泉ツアー、遊園地ツアー、バスツアーから選んでください。'
+                    state = 2                      
+                           
             elif state == 3:
-                # 課題5用　柔軟な入力を受け付ける
+                # 課題5用　柔軟な入力を受け付ける(正規表現)
                 # 場所の正規表現パターンを作成
-                #'登別|有馬|別府|草津|白浜|USJ|ディズニーランド|ディズニーシー|花やしき|ひらかたパーク|中華街|黒潮市場|姫路城'
-                pattern = r'|'.join([re.escape(location) for locations in activity_data.values() for location in locations])   
-
-                # 正規表現で場所を検索
-                match_location = re.search(pattern, input)               
-
-                if match_location:
-                    user_data["location"] = match_location.group()  # マッチした場所を取得
-
-                    write_file(data_path2, user_data["location"])  # 入力をファイルに書き込む
+                #'登別|有馬|別府|草津|白浜|USJ|ディズニーランド|ディズニーシー|花やしき|ひらかたパーク|中華街|黒潮市場|姫路城'                
+                pattern_location = r'|'.join([re.escape(location) for locations in activity_data.values() for location in locations])  # 場所の正規表現
+                pattern_date = r'(\d{4})[^\d]?(\d{1,2})[^\d]?(\d{1,2})[^\d]?'  # 日付の正規表現（例: 2023/04/02）
+                pattern_time = r'(AM|PM|am|pm|午前|午後)'  # 時間帯の正規表現
+                
+                # 入力文を正規表現で解析
+                match_location = re.search(pattern_location, input)  # 場所を検索
+                match_date = re.search(pattern_date, input)  # 日付を検索
+                match_time = re.search(pattern_time, input)  # 時間帯を検索
+                
+                
+                if match_location and match_date:
+                    # アクティビティ、場所、日時すべてが含まれている場合       
+                    user_data["location"] = match_location.group()
+                    user_data["date"] = f"{match_date.group(1)}/{match_date.group(2).zfill(2)}/{match_date.group(3).zfill(2)}"  # YYYY/MM/DD形式でフォーマット
+                    user_data["time"] = match_time.group().upper() if match_time else ''  # AM/PMがあるか確認
+                    budget = budget_data.get(user_data["location"], 0)
                     
-                    message = 'ご希望の日付を教えてください。（例: 2024/10/05 AM）'
-                    state = 4
+                    # ファイルに書き込む
+                    write_file(data_path2, user_data["location"])  # 場所をファイルに書き込む
+                    write_file(data_path3, f'{user_data["date"]} {user_data["time"]}')  # 日時をファイルに書き込む
+                    # 予約内容を確認するメッセージ
+                    message = (f'予約内容は、\n'
+                               f'アクティビティ: {user_data["activity"]}\n'
+                               f'場所: {user_data["location"]}\n'
+                               f'日付: {user_data["date"]} {user_data["time"]}\n'
+                               f'予算: {budget // 10000}万円\n'
+                               'でよろしいですか？ (はい/いいえ)')
+                    state = 5  # 次の確認ステップへ進む
+                elif match_location:
+                    # アクティビティと場所のみ入力されている場合 -> 日時指定のステートへ進む
+                    user_data["location"] = match_location.group()
+                    write_file(data_path2, user_data["location"])  # 場所をファイルに書き込む
+                    message = 'ご希望の日付を教えてください。（例: 2023/04/02 AM）'
+                    state = 4  # 日時入力ステップへ進む
                 else:
                     message = '申し訳ありません、その場所は選べません。リストにある場所から選んでください。'
-                    state = 3
+                    state = 3 # 場所入力ステップへ戻る
+                    
                     
             elif state == 4:
                 # 課題5用　例: 形式に関係なく動作する、年月日の正規表現を追加                                
                 # 予約可能性のチェックを入れる
-                # 日付と時間の解析
-                match_date = re.match(r'(\d{4})[^\d]?(\d{1,2})[^\d]?(\d{1,2})[^\d]?\s*(AM|PM|am|pm|午前|午後)', input)
+                # 日付と時間の解析    
+                pattern_date = r'(\d{4})[^\d]?(\d{1,2})[^\d]?(\d{1,2})[^\d]?'  # 日付の正規表現（例: 2023/04/02）
+                pattern_time = r'(AM|PM|am|pm|午前|午後)'  # 時間帯の正規表現
                 
-                if match_date and len(match_date.groups()) == 4:
+                # 入力文を正規表現で解析
+                match_date = re.search(pattern_date, input)  # 日付を検索
+                match_time = re.search(pattern_time, input)  # 時間帯を検索
+                
+                # 日時すべてが含まれている場合       
+                    
+                if match_date and match_time:
+                    user_data["date"] = f"{match_date.group(1)}/{match_date.group(2).zfill(2)}/{match_date.group(3).zfill(2)}"
+                    user_data["time"] = match_time.group().upper() if match_time else ''  # AM/PMがあるか確認
+                    # ファイルに書き込む
+                    write_file(data_path3, f'{user_data["date"]} {user_data["time"]}')
+                    
+                    budget = budget_data.get(user_data["location"], 0)
+
+                    # 予約内容を確認するメッセージ
+                    message = (f'予約内容は、\n'
+                               f'アクティビティ: {user_data["activity"]}\n'
+                               f'場所: {user_data["location"]}\n'
+                               f'日付: {user_data["date"]} {user_data["time"]}\n'
+                               f'予算: {budget // 10000}万円\n'
+                               'でよろしいですか？ (はい/いいえ)')
+                    state = 5  # 次の確認ステップへ進む
+                else:
+                    message = '正しい日付と時間を指定してください。'
+                    state = 4 # 日時入力ステップへ戻る
+                    printV(booked_slots_per_location[user_data["location"]])
+
+            elif state == 5:
+                if input == 'はい': 
                     try:
-                        year, month, day, date = match_date.groups()
+                        # user_data["date"]: YYYY/MM/DD形式でフォーマットされている
+                        # user_data["time"]: AM/PM形式でフォーマットされている
+                        year, month, day = map(int, user_data["date"].split('/'))
                         desired_date = datetime(year=int(year), month=int(month), day=int(day))
-                        desired_time = date if date else "未指定"  # 時間が指定されていない場合は"未指定"にする
-
-                        write_file(data_path3, desired_date.strftime('%Y/%m/%d') + ' ' + desired_time)
-                        user_data["date"] = read_file(data_path3, 'str', None)
-
-                        message = f'予約内容：{user_data["activity"]} - {user_data["location"]} - {user_data["date"]}\n'
-                        budget = budget_data.get(user_data["location"], 0)
-                        message += f'予算は{budget // 10000}万円です。予約可能か確認します...'
-
+                        
+                        date_time  = []
+                        date_time.append([user_data["date"], user_data["time"]])
+                        
+                        printV("\n\n")
+                        printV(booked_slots_per_location[user_data["location"]])
+                        printV(user_data["date"])
+                        printV(user_data["time"])
+                        printV(date_time)
+                        printV("\n\n")
+                        
                         # 予約可能性のチェックを入れる
                         if desired_date < start_date or desired_date > end_date:
                             message = 'その日付は予約できません。'
-                        elif (desired_date.strftime('%Y/%m/%d'), desired_time) in booked_slots_per_location[user_data["location"]]:
-                            message = f'{desired_date.strftime("%Y/%m/%d")}の{desired_time}は予約が埋まっています。再試行します...'
+                            state = 4                            
+                        # date_time のすべての要素が location_time に含まれているかどうかを確認
+                        # error例：elif date_time in booked_slots_per_location[user_data["location"]]: 
+                        elif all(item in booked_slots_per_location[user_data["location"]] for item in date_time):   
+                            message = f'{user_data["date"]}の{user_data["time"]}は予約が埋まっています。申し訳ございませ。他の日程ではどうでしょう...\n'
+                            state = 4
                             attempt_count += 1
                         else:
-                            message = f'{desired_date.strftime("%Y/%m/%d")}の{desired_time}は予約可能です。'
+                            message = f'{desired_date.strftime("%Y/%m/%d")}の{user_data["time"]}で予約完了です。\n\n'
                             budget = budget_data.get(user_data['location'], 0)
-                            message += f'予算は{budget // 10000}万円です。'
+                            
+                            # 予約内容を確認するメッセージ                           
+                            message = (
+                                f'予約内容は、\n'
+                                f'アクティビティ: {user_data["activity"]}\n'
+                                f'場所: {user_data["location"]}\n'
+                                f'日付: {user_data["date"]} {user_data["time"]}\n'
+                                f'予算: {budget // 10000}万円\n'
+                                'で予約が完了しました。')
+                            
                             attempt_count = 0  # リトライ成功時はカウントをリセット
 
                         # 予約不可の場合 (10回以上のリトライ)
@@ -322,12 +437,16 @@ def index():
                             message = '申し訳ありません、予約できませんでした。対話を終了します。'
                             continueFlag = False
                             state = 1
-                            
+                    
                     except ValueError as e:
                         message = f'日付の解析に失敗しました: {e}'
-                else:
-                    message = '正しい日付と時間を指定してください。'
-
+                        message = '正しい日付と時間を指定してください。'
+                        state = 4
+                
+                elif input == 'いいえ':
+                    message = '予約希望を取り消しました。もう一度入力してください'
+                    state = 1
+                
        
             # 状態の更新
             write_file(data_path, int(state))
@@ -374,5 +493,3 @@ def printV(content):
     print('\n\n')
     print(content, end='')
     print(' (file: ' + os.path.basename(frame.f_code.co_filename) + ', function: ' + frame.f_code.co_name + ', line: ' + str(frame.f_lineno) + ')')
-
-

@@ -29,10 +29,6 @@ user_data = {
     "time": None
 }
 
-# 予約可能性のチェックのためのカウンタ, 10回超えたら予約不可
-max_attempts = 10
-attempt_count = 0
-
 # 予約可能なスロットの生成
 start_date = datetime(2022, 3, 1)
 end_date = datetime(2022, 4, 30)
@@ -215,6 +211,7 @@ def index():
         data_path3 = os.getcwd() + '/itinerary.txt'
         data_path4 = os.getcwd() + '/attempt_count.txt'
         data_path5 = os.getcwd() + '/booked_slots.txt'
+        data_path6 = os.getcwd() + '/error_recovery.txt'
         
         # index関数内のファイル読み書きのリファクタリング
         state = read_file(data_path, 'int', 1)
@@ -223,8 +220,11 @@ def index():
         # 日時の読み込み (YYYY/MM/DD time 形式)、 内容をトリミングして空白で分割
         user_data["date"], user_data["time"] = read_file(data_path3, 'str', "None None").strip().split()  
         attempt_count = read_file(data_path4, 'int', 0)
+        error_recovery = read_file(data_path6, 'int', 0)
+        budget = budget_data.get(user_data["location"], 0)
+        # 予約可能性のチェックのためのカウンタ, 10回超えたら予約不可
+        max_attempts = 10
         
-
         # 予約始まってから、固定させる。
         if(state == 1):
             global booked_slots_per_location
@@ -238,17 +238,28 @@ def index():
         print_booked_slots(booked_slots_per_location, available_slots_per_location, activity_data)
             
         ###########################################################
-        
         if input == 'リセット':  # 状態をリセットする場合
-            with open(data_path, mode='w', encoding='utf-8') as w:
-                # state.txtに[1]を上書き
-                w.write('1')
-                message = '状態をリセットしました'
-                continueFlag = False
-        else:             
+            state = 1
+            message = '状態をリセットしました'
+            continueFlag = False
+                    
+        elif input == '戻る':  # 状態をリセットする場合
+            message = '1つ前のステップに戻ります。\n'
+            state -= 1
+            
+            if state ==1 or state == 2:
+                if state == 1:
+                    state = 2
+                message += 'どのアクティビティをご希望ですか？\n'
+            elif state == 3:
+                message += f'どの場所をご希望ですか？\n'
+            elif state == 4:
+                message += 'ご希望の日程はいかがなさいますか？\n'
+            
+        else:    
             # 状態に応じて異なる発話を生成
             if state == 1:
-                message = 'どのアクティビティをご希望ですか？（温泉ツアー、遊園地ツアー、バスツアーから選んでください）'
+                message = 'どのアクティビティをご希望ですか？\n'
                 state = 2
             elif state == 2:   
                 # 課題5用　柔軟な入力を受け付ける(正規表現)
@@ -265,7 +276,7 @@ def index():
                 match_date = re.search(pattern_date, input)  # 日付を検索
                 match_time = re.search(pattern_time, input)  # 時間帯を検索
 
-                if match_activity and match_location and match_date:
+                if match_activity and match_location and match_date and match_time:
                         # アクティビティ、場所、日時すべてが含まれている場合
                         user_data["activity"] = match_activity.group() + "ツアー"
                         user_data["location"] = match_location.group()
@@ -277,7 +288,7 @@ def index():
                         write_file(data_path1, user_data["activity"])  # アクティビティをファイルに書き込む
                         write_file(data_path2, user_data["location"])  # 場所をファイルに書き込む
                         write_file(data_path3, f'{user_data["date"]} {user_data["time"]}')  # 日時をファイルに書き込む
-
+                                   
                         # 予約内容を確認するメッセージ
                         message = (f'予約内容は、\n'
                                    f'アクティビティ: {user_data["activity"]}\n'
@@ -286,6 +297,7 @@ def index():
                                    f'予算: {budget // 10000}万円\n'
                                    'でよろしいですか？ (はい/いいえ)')
                         state = 5  # 予約確認ステップへ進む
+                        error_recovery = 0  # エラー回復カウンタをリセット
                         
                 elif match_activity and match_location:
                         # アクティビティと場所のみ入力されている場合 -> 日時指定のステートへ進む
@@ -294,23 +306,43 @@ def index():
 
                         write_file(data_path1, user_data["activity"])  # アクティビティをファイルに書き込む
                         write_file(data_path2, user_data["location"])  # 場所をファイルに書き込む
-
-                        message = 'ご希望の日付を教えてください。（例: 2023/04/02 AM）'
+                        
+                        message = 'ご希望の日程はいかがなさいますか。'
                         state = 4  # 日時入力ステップへ進む
                         printV(booked_slots_per_location[user_data["location"]])
+                        error_recovery = 0  # エラー回復カウンタをリセット
 
                 elif match_activity:
                     # アクティビティのみ入力された場合
                     user_data["activity"] = match_activity.group() + "ツアー"
                     write_file(data_path1, user_data["activity"])
-            
-                    message = f'{user_data["activity"]}のどの場所をご希望ですか？'
+                    
+                    # 応対メッセージ
+                    message = (f'{match_activity.group()}は、とても良い選択ですね！\n\n')
+                    if user_data["activity"] == "温泉ツアー":
+                        message += '私も週末は、温泉でリラックスしてみようと考えています...\n\n'
+                    elif user_data["activity"] == "遊園地ツアー":
+                        message += '乗り物優先パスもサービスでお付けしますので存分に楽しんでください！\n\n'
+                    elif user_data["activity"] == "バスツアー":
+                        message += 'こちらのバスツアーは、休憩時間を小まめに設けていますので、安心してご乗車いただけますよ。\n\n'
+
+                    message += f'それでは、{user_data["activity"]}のどの場所をご希望ですか？\n'
                     state = 3  # 場所入力ステップへ進む
+                    error_recovery = 0  # エラー回復カウンタをリセット
             
                 else:
                     # 無効な入力があった場合
-                    message = '申し訳ありません、そのアクティビティは選べません。温泉ツアー、遊園地ツアー、バスツアーから選んでください。'
-                    state = 2                      
+                    if(error_recovery == 0):
+                        message = ( f'申し訳ありません、聞き取れませんでした。\n'
+                                    f'もう一度お尋ねください。\n')                        
+                    elif (error_recovery == 1):
+                        message = ( f'「温泉にゆったりつかりたい！」という感じで聞いてください\n')
+                    else:
+                        message = ( f'「温泉ツアー」・「遊園地ツアー」・「バスツアー」の中からお選びください。\n')
+                    
+                    state = 2 
+                    error_recovery += 1
+                                
                            
             elif state == 3:
                 # 課題5用　柔軟な入力を受け付ける(正規表現)
@@ -326,7 +358,7 @@ def index():
                 match_time = re.search(pattern_time, input)  # 時間帯を検索
                 
                 
-                if match_location and match_date:
+                if match_location and match_date and match_time:
                     # アクティビティ、場所、日時すべてが含まれている場合       
                     user_data["location"] = match_location.group()
                     user_data["date"] = f"{match_date.group(1)}/{match_date.group(2).zfill(2)}/{match_date.group(3).zfill(2)}"  # YYYY/MM/DD形式でフォーマット
@@ -336,6 +368,7 @@ def index():
                     # ファイルに書き込む
                     write_file(data_path2, user_data["location"])  # 場所をファイルに書き込む
                     write_file(data_path3, f'{user_data["date"]} {user_data["time"]}')  # 日時をファイルに書き込む
+                    
                     # 予約内容を確認するメッセージ
                     message = (f'予約内容は、\n'
                                f'アクティビティ: {user_data["activity"]}\n'
@@ -344,16 +377,37 @@ def index():
                                f'予算: {budget // 10000}万円\n'
                                'でよろしいですか？ (はい/いいえ)')
                     state = 5  # 次の確認ステップへ進む
+                    error_recovery = 0  # エラー回復カウンタをリセット
                 elif match_location:
                     # アクティビティと場所のみ入力されている場合 -> 日時指定のステートへ進む
                     user_data["location"] = match_location.group()
                     write_file(data_path2, user_data["location"])  # 場所をファイルに書き込む
-                    message = 'ご希望の日付を教えてください。（例: 2023/04/02 AM）'
-                    state = 4  # 日時入力ステップへ進む
-                else:
-                    message = '申し訳ありません、その場所は選べません。リストにある場所から選んでください。'
-                    state = 3 # 場所入力ステップへ戻る
                     
+                    
+                    # 応対メッセージ
+                    message = (f'{user_data["location"]}は、今熱いところですね！\n\n')
+                    if user_data["activity"] == "温泉ツアー":
+                        message += f'先日、私の母も{user_data["location"]}は凄いと語ってくれました。\n\n'
+                    elif user_data["activity"] == "遊園地ツアー":
+                        message += '夜には今流行りのドローンショーが行われるだとか...。とても綺麗だと聞いております。\n\n'
+                    elif user_data["activity"] == "バスツアー":
+                        message += f'{user_data["location"]}おいしいものが沢山ありますので、食べ歩きしまくりましょう！\n\n'
+
+                    message += 'それでは、ご希望の日付はいかがですか？（例: 2022/04/02 AM）'
+                    state = 4  # 日時入力ステップへ進む
+                    error_recovery = 0  # エラー回復カウンタをリセット
+                else:
+                    # 無効な入力があった場合
+                    if(error_recovery == 0):
+                        message = ( f'申し訳ありません、聞き取れませんでした。\n'
+                                    f'もう一度お尋ねください。\n')                        
+                    elif(error_recovery == 1):
+                        message = ( f'「有馬温泉に行きたい！」という感じで聞いてください。\n')
+                    else:
+                        message = ( f'{activity_data[user_data["activity"]]}の中からお願いします。\n')
+                                    
+                    state = 3 # 場所入力ステップへ戻る
+                    error_recovery += 1  # エラー回復カウンタをリセット
                     
             elif state == 4:
                 # 課題5用　例: 形式に関係なく動作する、年月日の正規表現を追加                                
@@ -374,8 +428,6 @@ def index():
                     # ファイルに書き込む
                     write_file(data_path3, f'{user_data["date"]} {user_data["time"]}')
                     
-                    budget = budget_data.get(user_data["location"], 0)
-
                     # 予約内容を確認するメッセージ
                     message = (f'予約内容は、\n'
                                f'アクティビティ: {user_data["activity"]}\n'
@@ -384,10 +436,19 @@ def index():
                                f'予算: {budget // 10000}万円\n'
                                'でよろしいですか？ (はい/いいえ)')
                     state = 5  # 次の確認ステップへ進む
+                    error_recovery = 0  # エラー回復カウンタをリセット
                 else:
+                    if(error_recovery == 0):
+                        message = ( f'申し訳ありません、聞き取れませんでした。\n'
+                                    f'もう一度お願いします。\n')                    
+                    elif(error_recovery == 1):
+                        message = ( f'「2022年03月22日 午前でお願いします」という感じで聞いてください。\n')
+                    else:
+                        message = ( f' "年号・月・日・時刻"を決めていただけると助かります。\n')
+                    
                     message = '正しい日付と時間を指定してください。'
                     state = 4 # 日時入力ステップへ戻る
-                    printV(booked_slots_per_location[user_data["location"]])
+                    error_recovery += 1 # エラー回復カウンタをリセット
 
             elif state == 5:
                 if input == 'はい': 
@@ -414,42 +475,47 @@ def index():
                         # date_time のすべての要素が location_time に含まれているかどうかを確認
                         # error例：elif date_time in booked_slots_per_location[user_data["location"]]: 
                         elif all(item in booked_slots_per_location[user_data["location"]] for item in date_time):   
-                            message = f'{user_data["date"]}の{user_data["time"]}は予約が埋まっています。申し訳ございませ。他の日程ではどうでしょう...\n'
+                            message = f'{user_data["date"]}の{user_data["time"]}は予約が埋まっています。申し訳ありません。\n'
+                            if desired_date.weekday() == 5 and user_data.weekday() == 6:
+                                message += '土日は混雑が予想されますので、他の日程をご検討ください。\n'
+                            else:
+                                message += '他の日程をご検討ください。\n'
+    
                             state = 4
                             attempt_count += 1
                         else:
-                            message = f'{desired_date.strftime("%Y/%m/%d")}の{user_data["time"]}で予約完了です。\n\n'
-                            budget = budget_data.get(user_data['location'], 0)
-                            
+                            message = f'予約いたしました。\n\n'
                             # 予約内容を確認するメッセージ                           
-                            message = (
+                            message += (
                                 f'予約内容は、\n'
                                 f'アクティビティ: {user_data["activity"]}\n'
                                 f'場所: {user_data["location"]}\n'
                                 f'日付: {user_data["date"]} {user_data["time"]}\n'
                                 f'予算: {budget // 10000}万円\n'
-                                'で予約が完了しました。')
-                            
+                                'で予約が完了です、ありがとうございました。\n\n良い旅になることを心より願っております。')
                             attempt_count = 0  # リトライ成功時はカウントをリセット
 
                         # 予約不可の場合 (10回以上のリトライ)
                         if attempt_count >= max_attempts:
-                            message = '申し訳ありません、予約できませんでした。対話を終了します。'
+                            message = (f'{user_data["location"]}は只今とても混雑していまして、予約が困難な状況です。\n'
+                                       f'他の場所をご検討いただくか、後ほど再度お尋ねいただけますでしょうか？お力になれず、申し訳ありませんでした。')
                             continueFlag = False
                             state = 1
                     
                     except ValueError as e:
-                        message = f'日付の解析に失敗しました: {e}'
-                        message = '正しい日付と時間を指定してください。'
+                        message = (f'お聞きした日付が間違っている可能性があります: {e}\n'
+                                   f'もう一度、希望日程をお聞きしてもよろしいでしょうか。')
                         state = 4
                 
                 elif input == 'いいえ':
-                    message = '予約希望を取り消しました。もう一度入力してください'
+                    message = '希望を取り消しました。もう一度お尋ねください。'
+                    continueFlag = False
                     state = 1
                 
        
             # 状態の更新
             write_file(data_path, int(state))
+            write_file(data_path6, int(error_recovery))
             write_file(data_path4, attempt_count)
             
     # Webhookレスポンスの作成
