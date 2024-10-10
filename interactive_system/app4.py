@@ -279,22 +279,33 @@ def index():
                 if input == 'はい':
                     # 予約可能性のチェックを入れる
                     # 日付と時間の解析 
+                    
                     match = re.search(r'(\d{4}/\d{1,2}/\d{1,2})\s*(AM|PM)', user_data["date"])
+                    
                     if match:
                         desired_date = match.group(1)
                         desired_time = match.group(2)
-
-                        if (desired_date, desired_time) in booked_slots_per_location[user_data["location"]]:
-                            message = f'{desired_date}の{desired_time}は予約が埋まっています。'
+                        date_time  = []
+                        date_time.append([desired_date, desired_time])
+                        
+                        year, month, day = map(int, desired_date.split('/'))
+                        desired_date = datetime(year=int(year), month=int(month), day=int(day))
+                        
+                        if desired_date < start_date or desired_date > end_date:
+                            message = 'その日付は予約できません。'
+                            state = 4
+                        elif all(item in booked_slots_per_location[user_data["location"]] for item in date_time):
+                            message = f'{user_data["date"]}は予約が埋まっています。'
+                            state = 4
+                            attempt_count += 1
                         else:
-                            message = f'{desired_date}の{desired_time}は予約完了です。'
+                            message = f'{user_data["date"]}は予約が完了です。' 
                             budget = budget_data.get(user_data['location'], 0)
                             message += f'予算は{budget // 10000}万円です。'
                     else:
-                        message = '正しい日付と時間を指定してください。'
-
-                    attempt_count += 1
-
+                        message = "正しい日付と時間を指定してください。"
+                        state = 4
+                                            
                     # 予約不可の場合( 10回以上のリトライ ) 
                     if attempt_count >= max_attempts:
                         message = '申し訳ありません、予約できませんでした。対話を終了します。'
