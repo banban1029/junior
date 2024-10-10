@@ -221,7 +221,7 @@ def index():
         user_data["activity"] = read_file(data_path1, 'str', None)
         user_data["location"] = read_file(data_path2, 'str', None)
         # 日時の読み込み (YYYY/MM/DD time 形式)、 内容をトリミングして空白で分割
-        user_data["date"], user_data["time"] = read_file(data_path3, 'str', None).strip().split()  
+        user_data["date"], user_data["time"] = read_file(data_path3, 'str', "None None").strip().split()  
         attempt_count = read_file(data_path4, 'int', 0)
         
 
