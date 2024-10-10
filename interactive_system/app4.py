@@ -359,5 +359,3 @@ def printV(content):
     print('\n\n')
     print(content, end='')
     print(' (file: ' + os.path.basename(frame.f_code.co_filename) + ', function: ' + frame.f_code.co_name + ', line: ' + str(frame.f_lineno) + ')')
-
-
