@@ -26,11 +26,8 @@ def index():
     if input == 'バイバイ':
         message = 'さようなら'
         continueFlag = False
-        response = makeResponse(message, continueFlag)
-        return json.dumps(response)
-
     # ユーザの入力に応じて返答を決定
-    if input in res_map:  # 定型的な返答がある場合
+    elif input in res_map:  # 定型的な返答がある場合
         message = res_map[input]
         continueFlag = True
     else:  # 通常のメッセージを受け取った場合
