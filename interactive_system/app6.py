@@ -227,6 +227,7 @@ def index():
 
         # 予約始まってから、固定させる。
         if(state == 1):
+            global booked_slots_per_location
             save_slots_to_file(data_path5, booked_slots_per_location)
     
         # スロットを読み込む
