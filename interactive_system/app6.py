@@ -395,16 +395,20 @@ def index():
                         year, month, day = map(int, user_data["date"].split('/'))
                         desired_date = datetime(year=int(year), month=int(month), day=int(day))
                         
+                        date_time  = []
+                        date_time.append((user_data["date"].strftime("%Y/%m/%d"), user_data["time"]))
+                        
                         printV("\n\n")
                         printV(booked_slots_per_location[user_data["location"]])
                         printV(user_data["date"])
                         printV(user_data["time"])
+                        printV(date_time)
                         printV("\n\n")
                         
                         # 予約可能性のチェックを入れる
                         if desired_date < start_date or desired_date > end_date:
                             message = 'その日付は予約できません。'
-                        elif (user_data["date"], user_data["time"]) in booked_slots_per_location[user_data["location"]]:
+                        elif date_time in booked_slots_per_location[user_data["location"]]:
                             message = f'{user_data["date"]}の{user_data["time"]}は予約が埋まっています。申し訳ございませ。他の日程ではどうでしょう...\n'
                             state = 4
                             attempt_count += 1
