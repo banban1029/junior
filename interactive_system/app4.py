@@ -25,7 +25,8 @@ budget_data = {
 user_data = {
     "activity": None,
     "location": None,
-    "date": None
+    "date": None,
+    "time": None
 }
 
 # 予約可能性のチェックのためのカウンタ, 10回超えたら予約不可
@@ -37,8 +38,7 @@ start_date = datetime(2022, 3, 1)
 end_date = datetime(2022, 4, 30)
 
 
-# 予約可能なスロットの生成関数
-# 予約可能スロットの生成関数（ルールに基づく）
+# 稼働日の取得
 def generate_slots_with_rules(start_date, end_date, activity):
     available_slots = []
     current_date = start_date
@@ -85,6 +85,7 @@ def generate_booked_slots(available_slots, rate):
 available_slots_per_location = {}
 booked_slots_per_location = {}
 
+# 予約可能スロットの生成
 for activity, locations in activity_data.items():
     for location in locations:
         # スロットを生成
@@ -124,6 +125,46 @@ for activity, locations in activity_data.items():
         elif activity == "バスツアー":
             booked_slots_per_location[location] = generate_booked_slots(available_slots, 0.2)
 
+# スロットをファイルに保存する関数
+def save_slots_to_file(file_name, booked_slots_per_location):
+    with open(file_name, 'w') as f:
+        json.dump(booked_slots_per_location, f, ensure_ascii=False, indent=4)
+
+
+# スロットをファイルから読み込む関数
+def load_slots_from_file(file_name):
+    with open(file_name, 'r') as f:
+        return json.load(f)
+
+# 予約スケジュールの可視化関数
+def print_booked_slots(booked_slots_per_location, available_slots_per_location, activity_data):
+    for activity, locations in activity_data.items():
+        print(f"アクティビティ: {activity}")
+        print("=" * 40)
+        for location in locations:
+            print(f"場所: {location}")
+            print("-" * 30) # アクティビティの区切り線を追加
+            # 予約済みスロットの出力
+            print("予約済みスロット:")
+            booked_slots = booked_slots_per_location.get(location, [])
+            if booked_slots:
+                for slot in booked_slots:
+                    date, time = slot
+                    print(f"  日付: {date}, 時間帯: {time}")
+            else:
+                print("  予約済みスロットはありません。")
+            # 予約可能スロットの出力
+            print("\n予約可能スロット:")
+            available_slots = available_slots_per_location.get(location, [])
+            if available_slots:
+                for slot in available_slots:
+                    date, time = slot
+                    if slot not in booked_slots:
+                        print(f"  日付: {date}, 時間帯: {time}")
+            else:
+                print("  予約可能なスロットはありません。")
+            print("\n" + "=" * 30 + "\n")
+
 
 # ユーティリティ関数を追加
 def read_file(filepath, type, initial_value=None):
@@ -149,10 +190,8 @@ def write_file(filepath, content):
     else:  # .txtが見つからなかった場合
         printV(filepath + ' is not found!')
         printV('Error:')
-
-
-  
         
+            
 @app.route('/', methods=['POST'])
 # DialogflowからWebhookリクエストが来るとindex()関数が呼び出される
 def index():
@@ -171,57 +210,32 @@ def index():
         
         # 状態(state)の取得
         data_path = os.getcwd() + '/state.txt'
-        data_path0 = os.getcwd() + '/scheduled.txt'
         data_path1 = os.getcwd() + '/activity.txt'
         data_path2 = os.getcwd() + '/location.txt'
-        data_path3 = os.getcwd() + '/date.txt'
+        data_path3 = os.getcwd() + '/itinerary.txt'
         data_path4 = os.getcwd() + '/attempt_count.txt'
+        data_path5 = os.getcwd() + '/booked_slots.txt'
         
         # index関数内のファイル読み書きのリファクタリング
         state = read_file(data_path, 'int', 1)
         user_data["activity"] = read_file(data_path1, 'str', None)
         user_data["location"] = read_file(data_path2, 'str', None)
-        user_data["date"] = read_file(data_path3, 'str', None)
+        # 日時の読み込み (YYYY/MM/DD time 形式)、 内容をトリミングして空白で分割
+        user_data["date"], user_data["time"] = read_file(data_path3, 'str', "None None").strip().split()  
         attempt_count = read_file(data_path4, 'int', 0)
         
-        ###########################################################
-        
-        # 状態ファイルの確認
-        # schedule.txtがHerokuサーバ上にあるかチェック
-        # 予約スロットリストをアクティビティごとに schedule.txt に書き込む
-        with open(data_path0, mode='w', encoding='utf-8') as f:
-            for activity, locations in activity_data.items():
-                    f.write(f"アクティビティ: {activity}\n")
-                    f.write("=" * 40 + "\n")  # アクティビティの区切り線を追加
-                    for location in locations:
-                        f.write(f"場所: {location}\n")
-                        f.write("-" * 30 + "\n")  # 場所の区切り線を追加
-                        # 予約済みスロットの出力
-                        f.write("予約済みスロット:\n")
-                        booked_slots = booked_slots_per_location.get(location, [])
-                        if booked_slots:
-                            for slot in booked_slots:
-                                date, time = slot
-                                f.write(f"  日付: {date}, 時間帯: {time}\n")  # 見やすい形式で出力
-                        else:
-                            f.write("  予約済みスロットはありません。\n")
-                        f.write("\n")
-                        # 予約可能スロットの出力
-                        f.write("予約可能スロット:\n")
-                        available_slots = available_slots_per_location.get(location, [])
-                        if available_slots:
-                            for slot in available_slots:
-                                date, time = slot
-                                if slot not in booked_slots:  # 予約済みでないスロットのみ表示
-                                    f.write(f"  日付: {date}, 時間帯: {time}\n")
-                        else:
-                            f.write("  予約可能なスロットはありません。\n")
-                        f.write("\n" + "=" * 30 + "\n\n")  # 場所ごとの区切り線を追加    
-                                        
-        with open(data_path0, mode='r', encoding='utf-8') as f:
-            content = f.read()  # ファイルの内容を読み取る
-            printV(content)  # ファイルの内容を出力 
-            
+        # 予約始まってから、固定させる。
+        if(state == 1):
+            global booked_slots_per_location
+            save_slots_to_file(data_path5, booked_slots_per_location)
+    
+        # スロットを読み込む
+        booked_slots_per_location = {}
+        booked_slots_per_location = load_slots_from_file(data_path5)
+
+        # 読み込んだデータを確認
+        print_booked_slots(booked_slots_per_location, available_slots_per_location, activity_data)
+
         ###########################################################
         
         if input == 'リセット':  # 状態をリセットする場合
@@ -240,55 +254,55 @@ def index():
                 if user_data["activity"] not in activity_data:
                     message = '申し訳ありません、そのアクティビティは選べません。温泉ツアー、遊園地ツアー、バスツアーから選んでください。'
                     state = 2
-                else:                    
-                    write_file(data_path1, input)
-                    user_data["activity"] = read_file(data_path1, 'str', None)                    
-                        
+                else:                      
+                    write_file(data_path1, user_data["activity"])  # アクティビティをファイルに書き込む                 
                     message = f'{user_data["activity"]}のどの場所をご希望ですか？'
-                    printV(user_data["activity"])
-                    state = 3
-                    
+                    state = 3      
             elif state == 3:
                 user_data["location"] = input
                 if user_data["location"] not in activity_data[user_data["activity"]]:
                     message = '申し訳ありません、その場所は選べません。リストにある場所から選んでください。'
                     state = 3
                 else:                    
-                    write_file(data_path2, input)
-                    user_data["location"] = read_file(data_path2, 'str', None)
-                        
+                    write_file(data_path2, user_data["location"])  
                     message = 'ご希望の日付を教えてください。（例: 2024/10/05 AM）'
                     state = 4
             elif state == 4:
-                write_file(data_path3, input)
-                user_data["date"] = read_file(data_path3, 'str', None)
-                        
+                user_data["date"] = input
+                write_file(data_path3, user_data["date"])
                 message = f'予約内容：{user_data["activity"]} - {user_data["location"]} - {user_data["date"]}\n'
                 budget = budget_data.get(user_data["location"], 0)
-                message += f'予算は{budget // 10000}万円です。予約可能か確認します...'
+                message += f'予算は{budget // 10000}万円です。こちらでよろしいですか？ (はい/いいえ)'
+                state = 5
+                
+            elif state == 5:
+                if input == 'はい':
+                    # 予約可能性のチェックを入れる
+                    # 日付と時間の解析 
+                    match = re.search(r'(\d{4}/\d{1,2}/\d{1,2})\s*(AM|PM)', user_data["date"])
+                    if match:
+                        desired_date = match.group(1)
+                        desired_time = match.group(2)
 
-                # 予約可能性のチェックを入れる
-                # 日付と時間の解析 
-                match = re.search(r'(\d{4}/\d{1,2}/\d{1,2})\s*(AM|PM)', user_data["date"])
-                if match:
-                    desired_date = match.group(1)
-                    desired_time = match.group(2)
-                
-                    if (desired_date, desired_time) in booked_slots_per_location[user_data["location"]]:
-                        message = f'{desired_date}の{desired_time}は予約が埋まっています。'
+                        if (desired_date, desired_time) in booked_slots_per_location[user_data["location"]]:
+                            message = f'{desired_date}の{desired_time}は予約が埋まっています。'
+                        else:
+                            message = f'{desired_date}の{desired_time}は予約完了です。'
+                            budget = budget_data.get(user_data['location'], 0)
+                            message += f'予算は{budget // 10000}万円です。'
                     else:
-                        message = f'{desired_date}の{desired_time}は予約可能です。'
-                        budget = budget_data.get(user_data['location'], 0)
-                        message += f'予算は{budget // 10000}万円です。'
-                else:
-                    message = '正しい日付と時間を指定してください。'
-                
-                attempt_count += 1
-                                    
-                # 予約不可の場合( 10回以上のリトライ ) 
-                if attempt_count >= max_attempts:
-                    message = '申し訳ありません、予約できませんでした。対話を終了します。'
-                    continueFlag = False
+                        message = '正しい日付と時間を指定してください。'
+
+                    attempt_count += 1
+
+                    # 予約不可の場合( 10回以上のリトライ ) 
+                    if attempt_count >= max_attempts:
+                        message = '申し訳ありません、予約できませんでした。対話を終了します。'
+                        continueFlag = False
+                        
+                elif input == "いいえ":
+                    message = '予約希望を取り消しました。もう一度入力してください'
+                    state = 1
 
             # 状態の更新
             write_file(data_path, int(state))
