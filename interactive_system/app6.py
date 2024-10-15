@@ -445,15 +445,16 @@ def index():
                 else:
                     if(error_recovery == 0):
                         message = ( f'申し訳ありません、聞き取れませんでした。\n'
-                                    f'もう一度お願いします。\n')                    
+                                    f'もう一度お願いします。\n')   
+                        error_recovery = 1                 
                     elif(error_recovery == 1):
                         message = ( f'「2022年03月22日 午前でお願いします」という感じで聞いてください。\n')
+                        error_recovery = 2
                     else:
                         message = ( f' "年号・月・日・時刻"を決めていただけると助かります。\n')
+                        error_recovery = 1
                     
-                    message = '正しい日付と時間を指定してください。'
                     state = 4 # 日時入力ステップへ戻る
-                    error_recovery += 1 # エラー回復カウンタをリセット
 
             elif state == 5:
                 if input == 'はい': 
