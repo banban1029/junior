@@ -513,10 +513,10 @@ def index():
                     state = 1
                 
        
-            # 状態の更新
-            write_file(data_path, int(state))
-            write_file(data_path6, int(error_recovery))
-            write_file(data_path4, attempt_count)
+        # 状態の更新
+        write_file(data_path, int(state))
+        write_file(data_path6, int(error_recovery))
+        write_file(data_path4, attempt_count)
             
     # Webhookレスポンスの作成
     response = makeResponse(message, continueFlag)
