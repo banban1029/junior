@@ -77,7 +77,7 @@ def index():
         save_slots_to_file(data_path6, booked_slots)
         
         # 読み込んだデータを確認
-        print_booked_slots(booked_slots, available_slots, activity_data)
+        print_booked_slots(available_slots, booked_slots)
         
     # 予約スロット生成（ルール適用）および予約状況の管理
     available_slots = {}
