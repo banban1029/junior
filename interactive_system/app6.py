@@ -245,15 +245,15 @@ def index():
                     
         elif input == '戻る':  # 状態をリセットする場合
             message = '1つ前のステップに戻ります。\n'
-            state -= 1
             
-            if state ==1 or state == 2:
-                if state == 1:
-                    state = 2
+            if state ==1 or state == 2 or state == 3:
+                state=2
                 message += 'どのアクティビティをご希望ですか？\n'
-            elif state == 3:
-                message += f'どの場所をご希望ですか？\n'
             elif state == 4:
+                state=3
+                message += f'どの場所をご希望ですか？\n'
+            elif state == 5:
+                state=4
                 message += 'ご希望の日程はいかがなさいますか？\n'
             
         else:    
