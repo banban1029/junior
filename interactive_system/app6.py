@@ -402,7 +402,12 @@ def index():
                         message = ( f'申し訳ありません、聞き取れませんでした。\n'
                                     f'もう一度お尋ねください。\n')                        
                     elif(error_recovery == 1):
-                        message = ( f'「有馬温泉に行きたい！」という感じで聞いてください。\n')
+                        if user_data["activity"] == "温泉ツアー":
+                            message = ( f'「有馬温泉に行きたい！」という感じで聞いてください。\n')
+                        elif user_data["activity"] == "遊園地ツアー":
+                            message = ( f'「USJに行きたい!」という感じで聞いてください。\n')
+                        elif user_data["activity"] == "バスツアー":
+                            message = ( f'「姫路城に行きたい！」という感じで聞いてください。\n')
                     else:
                         message = ( f'{activity_data[user_data["activity"]]}の中からお願いします。\n')
                                     
