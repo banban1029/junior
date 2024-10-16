@@ -9,12 +9,12 @@
 [![Heroku](https://img.shields.io/badge/Heroku-Deployed-blueviolet)](https://www.heroku.com/)
 [![Git](https://img.shields.io/badge/Git-Repository-orange)](https://git-scm.com/)
 
-# Tour Reservation System (`旅行対話システム`)
+# Tour Reservation System
 
 **A Flask-based web application for booking and managing tour reservations.**
 
-This system allows users to choose from three exciting tour options: 
-**温泉ツアー**, **遊園地ツアー**, and **バスツアー**.
+This system allows users to choose from three exciting tour options: \\
+**温泉ツアー**, **遊園地ツアー**, and **バスツアー**.\\
  Each tour has specific rules for availability and pricing.
 
 </div>
@@ -198,7 +198,7 @@ This experiment utilizes a **Webhook** to handle POST requests triggered by spec
 
 ### 感謝の言葉
 
-　ご協力いただき、誠にありがとうございます。本研究は、対話システムの改善に向けた重要な一歩となります。あなたの貴重な意見が、今後の研究に大いに役立つことを期待しています。引き続きよろしくお願いいたします。
+　ご協力いただき、誠にありがとうございます。本研究は、対話システムの改善に向けた重要な一歩となります。あなたの貴重な意見が、今後の実験に大いに役立つことを期待しています。引き続きよろしくお願いいたします。
 
 
 
