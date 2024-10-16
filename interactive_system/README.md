@@ -13,7 +13,9 @@
 
 **A Flask-based web application for booking and managing tour reservations.**
 
-This system allows users to choose from three exciting tour options: **温泉ツアー**, **遊園地ツアー**, and **バスツアー**. Each tour has specific rules for availability and pricing.
+This system allows users to choose from three exciting tour options: 
+**温泉ツアー**, **遊園地ツアー**, and **バスツアー**.
+ Each tour has specific rules for availability and pricing.
 
 </div>
 
@@ -104,21 +106,6 @@ Example for **温泉ツアー** at **登別**:
   日付: 2022/03/26, 時間帯: AM
 ==============================
 ```
-
-
-## ✨ **System Overview**
-
-This experiment uses a **Webhook** to handle POST requests triggered by specific events. The system includes a web server that processes these requests. The **POST request** is a type of HTTP communication where the client (such as a web browser) sends data to the web server.
-
-In this dialogue system, user utterances (text input) are transmitted to a **response generation server** hosted on **Heroku**. The system leverages **Actions on Google** and **Dialogue Flow** to forward user utterances to the server. The server then generates responses based on the input, which are used to create an interactive dialogue experience for the user.
-
-- 📝 **Webhook**: ![Webhook](https://img.shields.io/badge/Webhook-Enabled-green)
-- 🚀 **Heroku Deployment**: ![Heroku](https://img.shields.io/badge/Heroku-Deployed-blueviolet)
-- 🗣️ **Dialogue Flow Integration**: ![Dialogue Flow](https://img.shields.io/badge/DialogueFlow-v2-blue)
-- 📡 **POST Request**: ![POST Request](https://img.shields.io/badge/Request-POST-blue)
-- 🌐 **HTTP Protocol**: ![HTTP](https://img.shields.io/badge/Protocol-HTTP-yellow)
-- 🎤 **Actions on Google**: ![Actions on Google](https://img.shields.io/badge/Actions_on_Google-Integrated-red)
-- 💬 **Response Generation Server**: ![Response Server](https://img.shields.io/badge/Response-Generated-orange)
 
 ## ✨ **System Overview**
 
