@@ -14,7 +14,7 @@
 **A Flask-based web application for booking and managing tour reservations.**
 
 This system allows users to choose from three exciting tour options:  
-**温泉ツアー**, **遊園地ツアー**, and **バスツアー**.　　　
+**温泉ツアー**, **遊園地ツアー**, and **バスツアー**.  
  Each tour has specific rules for availability and pricing.
 
 </div>
