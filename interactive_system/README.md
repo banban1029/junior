@@ -13,8 +13,8 @@
 
 **A Flask-based web application for booking and managing tour reservations.**
 
-This system allows users to choose from three exciting tour options: \\
-**温泉ツアー**, **遊園地ツアー**, and **バスツアー**.\\
+This system allows users to choose from three exciting tour options:　　　
+**温泉ツアー**, **遊園地ツアー**, and **バスツアー**.　　　
  Each tour has specific rules for availability and pricing.
 
 </div>
@@ -139,7 +139,7 @@ This experiment utilizes a **Webhook** to handle POST requests triggered by spec
 
 ## 実験の目的と概要
 
-　本研究では、課題4および課題5で作成した対話システムの評価を行います。1回の対話施行では、システムの応答の多様性を正確に評価することが難しいため、各評価者には2回の対話施行を実施してもらいます。
+　本研究では、課題4および課題5で作成した対話システムの評価を行います。1回の対話施行では、システムの応答の多様性を正確に評価することが難しいため、評価者には各システムごとに、2回の対話施行を実施してもらいます。
 その後、実装した接客エージェントに対し、どの程度のホスピタリティを感じたかに則った「評価シート」による評価を行います。本研究の目的は、ホスピタリティが与える対話システムに対する満足度の影響度を調査することです。
 
 ### 実験のやり方
