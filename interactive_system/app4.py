@@ -303,7 +303,7 @@ def index():
                         desired_date = datetime(year=int(year), month=int(month), day=int(day))
                         
                         if desired_date < start_date or desired_date > end_date:
-                            message = 'その日付は予約できません。もう一度入力してください'
+                            message = 'その日付は予約できません。もう一度日付入力してください'
                             state = 4
                         elif all(item in booked_slots_per_location[user_data["location"]] for item in date_time):
                             message = f'{user_data["date"]}は予約が埋まっています。'
