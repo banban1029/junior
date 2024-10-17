@@ -141,20 +141,15 @@ def index():
                         write_file(data_path1, user_data["activity"])  # アクティビティをファイルに書き込む
                         write_file(data_path2, user_data["location"])  # 場所をファイルに書き込む
                         write_file(data_path3, f'{user_data["date"]} {user_data["time"]}')  # 日時をファイルに書き込む
-                        
-                        if user_data["location"] not in activity_data[user_data["activity"]]:
-                            message = '申し訳ありません、アクティビティと場所が対応していません。もう一度旅行項目を確認してください。'
-                            state = 2
-                        else:
-                            # 予約内容を確認するメッセージ
-                            message = (f'予約内容は、\n'
-                                       f'アクティビティ: {user_data["activity"]}\n'
-                                       f'場所: {user_data["location"]}\n'
-                                       f'日付: {user_data["date"]} {user_data["time"]}\n'
-                                       f'予算: {budget // 10000}万円\n'
-                                       'でよろしいですか？ (はい/いいえ)')
-                            state = 5  # 予約確認ステップへ進む
-                        
+                                   
+                        # 予約内容を確認するメッセージ
+                        message = (f'予約内容は、\n'
+                                   f'アクティビティ: {user_data["activity"]}\n'
+                                   f'場所: {user_data["location"]}\n'
+                                   f'日付: {user_data["date"]} {user_data["time"]}\n'
+                                   f'予算: {budget // 10000}万円\n'
+                                   'でよろしいですか？ (はい/いいえ)')
+                        state = 5  # 予約確認ステップへ進む
                         error_recovery = 0  # エラー回復カウンタをリセット
                         
                 elif match_activity and match_location:
@@ -165,13 +160,8 @@ def index():
                         write_file(data_path1, user_data["activity"])  # アクティビティをファイルに書き込む
                         write_file(data_path2, user_data["location"])  # 場所をファイルに書き込む
                         
-                        if user_data["location"] not in activity_data[user_data["activity"]]:
-                            message = '申し訳ありません、アクティビティと場所が対応していません。もう一度旅行項目を確認してください。'
-                            state = 2
-                        else:
-                            message = 'ご希望の日程はいかがなさいますか。'
-                            state = 4
-                        
+                        message = 'ご希望の日程はいかがなさいますか。'
+                        state = 4  # 日時入力ステップへ進む
                         printV(booked_slots_per_location[user_data["location"]])
                         error_recovery = 0  # エラー回復カウンタをリセット
 
@@ -232,43 +222,33 @@ def index():
                     write_file(data_path2, user_data["location"])  # 場所をファイルに書き込む
                     write_file(data_path3, f'{user_data["date"]} {user_data["time"]}')  # 日時をファイルに書き込む
                     
-                    if user_data["location"] not in activity_data[user_data["activity"]]:
-                            message = '申し訳ありません、アクティビティと場所が対応していません。もう一度を場所を入力してください。'
-                            state = 3
-                    else:
-                        # 予約内容を確認するメッセージ
-                        message = (f'予約内容は、\n'
-                                   f'アクティビティ: {user_data["activity"]}\n'
-                                   f'場所: {user_data["location"]}\n'
-                                   f'日付: {user_data["date"]} {user_data["time"]}\n'
-                                   f'予算: {budget // 10000}万円\n'
-                                   'でよろしいですか？ (はい/いいえ)')
-                        state = 5  # 予約確認ステップへ進む
-                        
+                    # 予約内容を確認するメッセージ
+                    message = (f'予約内容は、\n'
+                               f'アクティビティ: {user_data["activity"]}\n'
+                               f'場所: {user_data["location"]}\n'
+                               f'日付: {user_data["date"]} {user_data["time"]}\n'
+                               f'予算: {budget // 10000}万円\n'
+                               'でよろしいですか？ (はい/いいえ)')
+                    state = 5  # 次の確認ステップへ進む
                     error_recovery = 0  # エラー回復カウンタをリセット
                 elif match_location:
                     # アクティビティと場所のみ入力されている場合 -> 日時指定のステートへ進む
                     user_data["location"] = match_location.group()
                     write_file(data_path2, user_data["location"])  # 場所をファイルに書き込む
                     
-                    if user_data["location"] not in activity_data[user_data["activity"]]:
-                        message = '申し訳ありません、アクティビティと場所が対応していません。もう一度を場所を入力してください。'
-                        state = 3
-                        error_recovery = 1  # エラー回復カウンタをリセット 
-                    else:
-                        # 応対メッセージ
-                        message = (f'{user_data["location"]}は、今熱いところですね！\n\n')
-                        if user_data["activity"] == "温泉ツアー":
-                            message += f'先日、私の母も{user_data["location"]}は凄いと語ってくれました。\n\n'
-                        elif user_data["activity"] == "遊園地ツアー":
-                            message += '夜には今流行りのドローンショーが行われるだとか...。とても綺麗だと聞いております。\n\n'
-                        elif user_data["activity"] == "バスツアー":
-                            message += f'{user_data["location"]}おいしいものが沢山ありますので、食べ歩きしまくりましょう！\n\n'
+                    
+                    # 応対メッセージ
+                    message = (f'{user_data["location"]}は、今熱いところですね！\n\n')
+                    if user_data["activity"] == "温泉ツアー":
+                        message += f'先日、私の母も{user_data["location"]}は凄いと語ってくれました。\n\n'
+                    elif user_data["activity"] == "遊園地ツアー":
+                        message += '夜には今流行りのドローンショーが行われるだとか...。とても綺麗だと聞いております。\n\n'
+                    elif user_data["activity"] == "バスツアー":
+                        message += f'{user_data["location"]}おいしいものが沢山ありますので、食べ歩きしまくりましょう！\n\n'
 
-                        message += 'それでは、ご希望の日付はいかがですか？（例: 2022/04/02 AM）'
-                        state = 4  # 日時入力ステップへ進む
-                        error_recovery = 0  # エラー回復カウンタをリセット 
-                              
+                    message += 'それでは、ご希望の日付はいかがですか？（例: 2022/04/02 AM）'
+                    state = 4  # 日時入力ステップへ進む
+                    error_recovery = 0  # エラー回復カウンタをリセット
                 else:
                     # 無効な入力があった場合
                     if(error_recovery == 0):
@@ -350,10 +330,7 @@ def index():
                         # 予約可能性のチェックを入れる
                         if desired_date < start_date or desired_date > end_date:
                             message = 'その日付は予約できません。'
-                            state = 4          
-                        elif budget == 0:
-                            message = 'ご要望のアクティビティと場所の組み合わせは予約できません。'
-                            state = 1                  
+                            state = 4                            
                         # date_time のすべての要素が location_time に含まれているかどうかを確認
                         # error例：elif date_time in booked_slots_per_location[user_data["location"]]: 
                         elif all(item in booked_slots_per_location[user_data["location"]] for item in date_time):   
