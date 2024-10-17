@@ -216,7 +216,7 @@ def index():
                     user_data["location"] = match_location.group()
                     user_data["date"] = f"{match_date.group(1)}/{match_date.group(2).zfill(2)}/{match_date.group(3).zfill(2)}"  # YYYY/MM/DD形式でフォーマット
                     user_data["time"] = match_time.group().upper() if match_time else ''  # AM/PMがあるか確認
-                    budget = budget_data.get(user_data["location"], 0)
+                    budget = budget_data.get((user_data["activity"], user_data["location"]), 0)
                     
                     # ファイルに書き込む
                     write_file(data_path2, user_data["location"])  # 場所をファイルに書き込む

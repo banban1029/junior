@@ -17,11 +17,16 @@ activity_data = {
     "バスツアー": ["中華街", "黒潮市場", "姫路城"]
 }
 
-# budget_dataの読み込み
+# ツアー名と場所の組み合わせで予算を管理
 budget_data = {
-    "登別": 130000, "有馬": 50000, "別府": 100000, "草津": 70000, "白浜": 50000,
-    "USJ": 30000, "ディズニーランド": 50000, "ディズニーシー": 50000, "花やしき": 40000, "ひらかたパーク": 10000,
-    "中華街": 15500, "黒潮市場": 15500, "姫路城": 10000
+    ("温泉ツアー", "登別"): 130000, ("温泉ツアー", "有馬"): 50000, ("温泉ツアー", "別府"): 100000,
+    ("温泉ツアー", "草津"): 70000, ("温泉ツアー", "白浜"): 50000,
+    ("遊園地ツアー", "USJ"): 30000, ("遊園地ツアー", "ディズニーランド"): 50000, 
+    ("遊園地ツアー", "ディズニーシー"): 50000, ("遊園地ツアー", "花やしき"): 40000, 
+    ("遊園地ツアー", "ひらかたパーク"): 10000,
+    ("バスツアー", "中華街"): 15500, ("バスツアー", "黒潮市場"): 15500, 
+    ("バスツアー", "姫路城"): 10000, ("バスツアー", "ディズニーランド"): 40000, 
+    ("バスツアー", "有馬"): 10000
 }
 
 # user_dataの初期化
@@ -250,7 +255,7 @@ def index():
         else:             
             # 状態に応じて異なる発話を生成
             if state == 1:
-                message = 'どのアクティビティをご希望ですか？（温泉ツアー、遊園地ツアー、バスツアーから選んでください）'
+                message = 'どのアクティビティをご希望ですか？'
                 state = 2
                 
             # activityの選択
@@ -272,7 +277,7 @@ def index():
                     state = 3
                 else:                    
                     write_file(data_path2, user_data["location"])  
-                    message = 'ご希望の日付を教えてください。（例: 2024/10/05 AM）'
+                    message = 'ご希望の日付を教えてください。（例: 2022/03/10 AM）'
                     state = 4
                     
             # dateの選択
@@ -280,7 +285,7 @@ def index():
                 user_data["date"] = input
                 write_file(data_path3, user_data["date"])
                 message = f'予約内容：{user_data["activity"]} - {user_data["location"]} - {user_data["date"]}\n'
-                budget = budget_data.get(user_data["location"], 0)
+                budget = budget_data.get((user_data["activity"], user_data["location"]), 0)
                 message += f'予算は{budget // 10000}万円です。こちらでよろしいですか？ (はい/いいえ)'
                 state = 5
                 
@@ -309,7 +314,7 @@ def index():
                             attempt_count += 1
                         else:
                             message = f'{user_data["date"]}は予約が完了です。' 
-                            budget = budget_data.get(user_data['location'], 0)
+                            budget = budget_data.get((user_data["activity"], user_data["location"]), 0)
                             message += f'予算は{budget // 10000}万円です。'
                     else:
                         message = "正しい日付時間形式で入力してください。例: 2022/03/01 AM"
