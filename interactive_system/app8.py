@@ -44,7 +44,6 @@ end_date = datetime(2022, 4, 30)
 @app.route('/', methods=['POST'])
 # DialogflowからWebhookリクエストが来るとindex()関数が呼び出される
 def index():
-    global attempt_count
     # Google Assistantが音声入力をキャッチしたメッセージを取得し、input変数に代入
     input = request.json["queryResult"]["parameters"]["any"]
     printV('Received: ' + input)
@@ -75,6 +74,7 @@ def index():
         attempt_count = read_file(data_path4, 'int', 0)
         error_recovery = read_file(data_path6, 'int', 0)
         budget = budget_data.get((user_data["activity"], user_data["location"]), 0)
+        
         # 予約可能性のチェックのためのカウンタ, 10回超えたら予約不可
         max_attempts = 10
         
@@ -175,7 +175,7 @@ def index():
                     if user_data["activity"] == "温泉ツアー":
                         message += '私も週末は、温泉でリラックスしてみようと考えています...\n\n'
                     elif user_data["activity"] == "遊園地ツアー":
-                        message += '乗り物優先パスもサービスでお付けしますので存分に楽しんでください！\n\n'
+                        message += '乗り物優先パスもサービスでお付けしますので存分お楽しんでください！\n\n'
                     elif user_data["activity"] == "バスツアー":
                         message += 'こちらのバスツアーは、休憩時間を小まめに設けていますので、安心してご乗車いただけますよ。\n\n'
 

@@ -38,7 +38,6 @@ user_data = {
 
 # 予約可能性のチェックのためのカウンタ, 10回超えたら予約不可
 max_attempts = 10
-attempt_count = 0
 
 # 予約可能なスロットの生成
 start_date = datetime(2022, 3, 1)
@@ -202,9 +201,7 @@ def write_file(filepath, content):
 # DialogflowからWebhookリクエストが来るとindex()関数が呼び出される
 def index():
     # DialogflowからWebhookリクエストが来るとindex()関数が呼び出される
-    # Google Assistantが音声入力をキャッチしたメッセージを取得し、input変数に代入
-    global attempt_count
-    
+    # Google Assistantが音声入力をキャッチしたメッセージを取得し、input変数に代入    
     input = request.json["queryResult"]["parameters"]["any"]
     printV('Received: ' + input)
     
