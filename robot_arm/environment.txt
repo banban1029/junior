@@ -1,0 +1,5 @@
+python3 -m venv ~/.local/bin/robot_arm
+
+source ~/.local/bin/robot_arm/bin/activate
+
+deactivate
