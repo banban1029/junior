@@ -1,6 +1,7 @@
 import time
 from math import radians,degrees,sin,cos,atan2,sqrt,pi,acos
 import traceback
+import numpy as np
 
 print("mode select:")
 print("* 0 -> value check")
@@ -18,35 +19,47 @@ def main():
 
         # --- メインループ （実験内容に応じてここを変更）--- #
         while True:
+            
+            
+            J = np.zeros(6)  # 角度値の初期化（単位：degree）
+            p = np.zeros(3) # 位置の初期化（単位：mm）
 
-            J = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]  # 角度値の初期化（単位：degree）
-            p = [0.0, 0.0, 0.0]
+            # オフセット値の設定
+            J_sets = np.array([
+                [63.24, -41.72, -103.45, 55.17, 0.0, 63.24],
+                [63.24, -85.92, -83.17, 79.09, 0.0, 63.24],
+                [145.3, -63.36, -119.18, 92.54, 0.0, 145.3],
+                [41.6, -118.04, -155.24, 183.28, 0.0, 41.6]
+            ])
             
-            key = int(input("input key:"))
+            # 正解値の設定
+            p_sets = np.array([
+                [150, 150, 0],
+                [150, 150, 10],
+                [-100, 150, 50],
+                [100, 50, 50]
+            ])
             
-            if key == 1: # (150,150,100)
-                J = [63.24, -41.72, -103.45, 55.17, 0.0, 63.24]
-            elif key == 2: # (150,150,10)
-                J = [63.24, -85.92, -83.17, 79.09, 0.0, 63.24]
-            elif key == 3: # (-100,150,50)
-                J = [145.3, -63.36, -119.18, 92.54, 0.0, 145.3]
-            elif key == 4: # (100,50,50)
-                J = [41.6, -118.04, -155.24, 183.28, 0.0, 41.6]
-           
-            
+            key = int(input("offset key:"))
+            print()
+            J = J_sets[key-1]
 
             for i in range(6):                  # 6つの角度値を表示
-                print("J"+str(i+1)+": ",J[i])
+                print(f"J{i+1}: {J[i]}")
+            print()
 
             p = forward_kinematics(J)
             
             if(p[2]<15.0):
-                raise AngleError('pz < 15.0 error')
+                raise Z_ERROR('pz < 15.0 error')
+            else:
+                error = np.fabs(p_sets[key-1] - p)
+                
+                for i in range(3):  # 6つの角度値を表示
+                    print(f"p{i+1}: {p[i]}, error: {error[i]}")
+                    print()
 
             moveto(J=J, marker_pos = p)
-            
-            
-                
 
     except:
         traceback.print_exc()                   # try内で発生したエラーを表示
@@ -56,7 +69,11 @@ def main():
 # ----- 学生定義のサブ関数（実験内容に応じてここに関数を追加する） ----- #
 
 
-def change(J):
+
+class Z_ERROR(Exception):
+    pass
+
+def change_to_theta(J):
     theta = [J[0]/180 * pi  , J[1]/180 * pi + pi/2, J[2]/180 * pi, 
              J[3]/180 * pi + pi/2, J[4]/180 * pi - pi/2, J[5]/180 * pi]
 
@@ -65,13 +82,7 @@ def change(J):
 def forward_kinematics(J):
     
     d = [d1, 0, 0, d4, d5, d6]
-    theta = change(J)
-    
-    for i in range(6):                  # 6つの角度値を表示
-        print("theta"+str(i+1)+": ",theta[i])
-    
-    
-    
+    theta = change_to_theta(J) 
     l = [0, a2, a3, 0, 0, 0]
     alpha = [pi/2, 0, 0, pi/2, pi/2, 0]
     

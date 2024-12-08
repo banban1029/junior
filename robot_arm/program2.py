@@ -27,7 +27,7 @@ def main():
                 J[i] = float(input())               # 角度値をキーボード入力
                 
             for i in range(6):                  # 6つの角度値を表示
-                print("J"+str(i+1)+": ",J[i])
+                print(f"J{i+1}: {J[i]}")
 
             moveto(J=J, marker_pos = [100, 100, 100])
 

@@ -24,7 +24,7 @@ def main():
             J = np.zeros(6)  # 角度値の初期化（単位：degree）
             p = np.zeros(3) # 位置の初期化（単位：mm）
 
-            # オフセット値の設定
+            # 6軸関節角の設定
             J_sets = np.array([
                 [-12.08, -51.17, -123.8, 84.96, 0.0, -12.08],
                 [-34.7, -63.36, -119.18, 92.54, 0.0, -34.7],
@@ -33,6 +33,7 @@ def main():
                 [77.92, -63.36, -119.18, 92.54, 0.0, 77.92]
             ])
             
+            # 正解値の設定
             p_sets = np.array([
                 [150, -100, 70],
                 [100, -150, 50],
@@ -42,12 +43,22 @@ def main():
             ])
             
             # キー入力によるJの設定
-            key = int(input("input key:"))
-            J, p = J_sets[key-1], p_sets[key-1]
+            key = int(input("offset key:"))
+            print()
+            J = J_sets[key-1]
     
             for i in range(6):              # 6つの角度値を表示
-                print("J"+str(i+1)+": ",J[i])
+                #print("J"+str(i+1)+": ",J[i])
+                print(f"J{i+1}: {J[i]}")
+            print()
+            
+            p = forward_kinematics(J)
+            error = np.fabs(p_sets[key-1] - p)
                 
+            for i in range(3):  # 6つの角度値を表示
+                print(f"p{i+1}: {p[i]}, error: {error[i]}")
+            print()
+
             moveto(J=J, marker_pos = p)
 
     except:
@@ -82,8 +93,10 @@ def forward_kinematics(J):
     py = A*sin(theta[0])*cos(theta[1]+theta[2]) + B*sin(theta[0])*sin(theta[1]+theta[2]) + (l[1]+l[2]*cos(theta[2]))*sin(theta[0])*cos(theta[1]) - E*cos(theta[0]) - l[2]*sin(theta[0])*sin(theta[1])*sin(theta[2])
     
     pz = A*sin(theta[1]+theta[2]) - B*cos(theta[1]+theta[2]) + (l[1]+l[2]*cos(theta[2]))*sin(theta[1]) + H + I
+    
+    p = np.array([px, py, pz])
 
-    return [px, py, pz]
+    return p
 # ------------------------------------------------------------ #
 
 # ----- 【！変更しないこと！】mycobotライブラリの初期化 ----- #

@@ -24,15 +24,21 @@ def main():
 
             J = np.zeros(6)  # 角度値の初期化（単位：degree）
             p = np.zeros(3) # 位置の初期化（単位：mm）
+            p_achieved = np.zeros(3)
             
+            # オフセット値の設定
             p_sets = np.array([
                 [0, 0, 100],
                 [1000, 1000, 100],
                 [150, -100, 70],
-                [150, 100, 70]
+                [100, -150, 50],
+                [150, 0, 100],
+                [150, 100, 70],
+                [100, 150, 50]
             ])
             
-            key = int(input("input key:"))
+            key = int(input("offset key:"))
+            print()
             p = p_sets[key-1]
             
             # 1: theta[0]
@@ -43,12 +49,15 @@ def main():
                            
           
             for i in range(3):                  # 6つの角度値を表示
-                print("p"+str(i+1)+": ",p[i])
+                print(f"p{i+1}: {p[i]}")
+            print()
 
             J = inverse_kinematics(p)
+            p_achieved = forward_kinematics(J)
             
-            for i in range(6):                  # 6つの角度値を表示
-                print("J"+str(i+1)+": ",J[i])                
+            for i in range(3):                  # 6つの角度値を表示
+                print(f"p_achieved{i+1}: {p_achieved[i]}")
+            print()
             
             moveto(J=J, marker_pos = p)
 
@@ -59,29 +68,66 @@ def main():
 
 # ----- 学生定義のサブ関数（実験内容に応じてここに関数を追加する） ----- #
 
+def change_to_theta(J):
+    theta = np.array([
+        J[0] / 180 * np.pi,
+        J[1] / 180 * np.pi + np.pi / 2,
+        J[2] / 180 * np.pi,
+        J[3] / 180 * np.pi + np.pi / 2,
+        J[4] / 180 * np.pi - np.pi / 2,
+        J[5] / 180 * np.pi
+    ])
+    return theta
+
 def change_to_J(theta):
-    J = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-    J[0] = 180*theta[0]/pi
-    J[1] = 180*(theta[1]-pi/2)/pi
-    J[2] = 180*theta[2]/pi
-    J[3] = 180*(theta[3]-pi/2)/pi
-    J[4] = 180*(theta[4]+pi/2)/pi
-    J[5] = 180*theta[5]/pi
-    
+    J = np.array([
+        180 * theta[0] / np.pi,
+        180 * (theta[1] - np.pi / 2) / np.pi,
+        180 * theta[2] / np.pi,
+        180 * (theta[3] - np.pi / 2) / np.pi,
+        180 * (theta[4] + np.pi / 2) / np.pi,
+        180 * theta[5] / np.pi
+    ])
     return J
 
-def inverse_kinematics(p):
-    d = [d1, 0, 0, d4, d5, d6]    
+def forward_kinematics(J):
+    
+    d = [d1, 0, 0, d4, d5, d6]
+    theta = change_to_theta(J) 
     l = [0, a2, a3, 0, 0, 0]
     alpha = [pi/2, 0, 0, pi/2, pi/2, 0]
     
-    J = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-    theta = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    A = cos(theta[3])*sin(theta[4])*d[5] + sin(theta[3])*d[4]
+    B = -sin(theta[3])*sin(theta[4])*d[5] + cos(theta[3])*d[4]
+    E = d[3] - cos(theta[4])*d[5]
+    H = d[0]
+    I = l[2]*cos(theta[1])*sin(theta[2])
     
-    px = p[0]
-    py = p[1]
-    pz = p[2]
+    px = A*cos(theta[0])*cos(theta[1]+theta[2]) + B*cos(theta[0])*sin(theta[1]+theta[2]) + (l[1]+l[2]*cos(theta[2]))*cos(theta[0])*cos(theta[1]) + E*sin(theta[0]) -l[2]*cos(theta[0])*sin(theta[1])*sin(theta[2])
     
+    py = A*sin(theta[0])*cos(theta[1]+theta[2]) + B*sin(theta[0])*sin(theta[1]+theta[2]) + (l[1]+l[2]*cos(theta[2]))*sin(theta[0])*cos(theta[1]) - E*cos(theta[0]) - l[2]*sin(theta[0])*sin(theta[1])*sin(theta[2])
+    
+    pz = A*sin(theta[1]+theta[2]) - B*cos(theta[1]+theta[2]) + (l[1]+l[2]*cos(theta[2]))*sin(theta[1]) + H + I
+    
+    p = np.array([px, py, pz])
+
+    return p
+
+def inverse_kinematics(p):
+    J = np.zeros(6)
+    d = [d1, 0.0, 0.0, d4, d5, d6] 
+    theta = np.zeros(6)   
+    l = [0.0, a2, a3, 0.0, 0.0, 0.0]
+    alpha = [pi/2, 0.0, 0.0, pi/2, pi/2, 0.0]
+    
+    px, py, pz = p
+    
+    "theta1"
+    if py > 0:
+        theta[0] = pi - atan2(px, py) - acos(d[3]/sqrt(px*px + py*py))
+    else:
+        theta[0] = pi/2 + atan2(py, px) - acos(d[3]/sqrt(px*px + py*py))
+        
     "極座標変換"
     X = (px - cos(theta[0])*d[4] - sin(theta[0])*d[3])/cos(theta[0])
     Z = pz - d[0] + d[5]
@@ -91,15 +137,10 @@ def inverse_kinematics(p):
     
     h = sqrt(l[1]*l[1] + l[2]*l[2] + 2*l[1]*l[2]*cos(theta[1]))
     h_beta = atan2(l[2]*sin(theta[1]), l[1] + l[2]*cos(theta[1]))
-    
-    "theta1"
-    if py > 0:
-        theta[0] = pi - atan2(px, py) - acos(d[3]/sqrt(px*px + py*py))
-    else:
-        theta[0] = pi/2 + atan2(py, px) - acos(d[3]/sqrt(px*px + py*py))
         
     "theta3"
-    theta[2] = -atan2(sqrt((r*r+l[1]*l[1]+l[2]*l[2])**2 - 2*(r**4 + l[1]**4 + l[2]**4)), r*r-l[1]*l[1]-l[2]*l[2])
+    theta[2] = -atan2(sqrt((r*r+l[1]*l[1]+l[2]*l[2])**2 - 2*(r**4 + l[1]**4 + l[2]**4)), (r*r-l[1]*l[1]-l[2]*l[2]))
+    # theta[2] = -atan2(sqrt(4*l[1]*l[1]*l[2]*l[2]-(r*r-l[1]*l[1]-l[2]*l[2])*(r*r-l[1]*l[1]-l[2]*l[2])), r*r-l[1]*l[1]-l[2]*l[2])
     
     "theta2"
     theta[1] = atan2(Z, X) - atan2(l[2]*sin(theta[2]), l[1] + l[2]*cos(theta[2]))
@@ -112,9 +153,6 @@ def inverse_kinematics(p):
     
     "theta6"
     theta[5] = theta[0]
-    
-    for i in range(6):                  # 6つの角度値を表示
-        print("theta"+str(i+1)+": ",theta[i])
     
     J = change_to_J(theta)
     
