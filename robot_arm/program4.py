@@ -34,7 +34,7 @@ def main():
             
             # 正解値の設定
             p_sets = np.array([
-                [150, 150, 0],
+                [150, 150, 100],
                 [150, 150, 10],
                 [-100, 150, 50],
                 [100, 50, 50]
@@ -50,14 +50,14 @@ def main():
 
             p = forward_kinematics(J)
             
-            if(p[2]<15.0):
-                raise Z_ERROR('pz < 15.0 error')
-            else:
-                error = np.fabs(p_sets[key-1] - p)
+            z_check(p)
+            
+            error = np.fabs(p_sets[key-1] - p)
                 
-                for i in range(3):  # 6つの角度値を表示
-                    print(f"p{i+1}: {p[i]}, error: {error[i]}")
-                    print()
+            for i in range(3):  # 6つの角度値を表示
+                print(f"p{i+1}: {p[i]}, error: {error[i]}")
+            print()
+          
 
             moveto(J=J, marker_pos = p)
 
@@ -72,6 +72,12 @@ def main():
 
 class Z_ERROR(Exception):
     pass
+
+def z_check(p):
+    if p[2] < 15.0:
+        raise Z_ERROR('pz < 15.0 error')
+    else:
+        return True
 
 def change_to_theta(J):
     theta = [J[0]/180 * pi  , J[1]/180 * pi + pi/2, J[2]/180 * pi, 

@@ -19,25 +19,50 @@ def main():
     try:    # try内で何らかのエラーが発生 -> 処理中断してexceptに移動
 
         # --- メインループ （実験内容に応じてここを変更）--- #
-        while True:
 
-            J = np.zeros(6)  # 角度値の初期化（単位：degree）
-                       
-            p_sets = np.array([
-                [150, -100, 70],  # p_object
-                [150, 100, 70]    # p_target
-            ]) 
-
-            for p in p_sets:
-                J = inverse_kinematics(p)
-                moveto(J=J, marker_pos=p)         
+        J = np.zeros(6)  # 角度値の初期化（単位：degree）
+                   
+        p_sets = np.array([
+            [150, -100, 40],
+            [150, -100, 150],
+            [150, 100, 150],  
+            [150, 100, 40]    
+        ]) 
+        
+        j=0
+        
+        for p in p_sets:
+            J = inverse_kinematics(p)
+            p_achieved = forward_kinematics(J)
+            z_check(p_achieved)
+            
+            error = np.fabs(p - p_achieved)
+            
+            for i in range(3):  # 6つの角度値を表示
+                print(f"p{i+1}: {p_achieved[i]}, error: {error[i]}")
+            print()
+            
+            moveto(J=J, marker_pos=p)
+                
+                
+        
+                
 
     except:
         traceback.print_exc()                   # try内で発生したエラーを表示
 # -------------------- #
 
-
 # ----- 学生定義のサブ関数（実験内容に応じてここに関数を追加する） ----- #
+
+
+class Z_ERROR(Exception):
+    pass
+
+def z_check(p):
+    if p[2] < 15.0:
+        raise Z_ERROR('pz < 15.0 error')
+    else:
+        return True
 
 def change_to_theta(J):
     theta = np.array([
@@ -68,14 +93,19 @@ class sqrtError(Exception):
     pass
 
 def atan2_check(y,x):
-    if x < 0.001 and x > -0.001:
-        raise atan2Error('atan2 error')
+    # if x < 0.001 and x > -0.001:
+    #     raise atan2Error('atan2 error')
     return atan2(y,x)
 
 def sqrt_check(x):
     if x < 0:
         raise sqrtError('sqrt error')
     return sqrt(x)
+
+def zero_divizion_check(y,x):
+    if x < 0.001 and x > -0.001:
+        raise ZeroDivisionError('ZeroDivisionError')
+    return y/x
 
 def forward_kinematics(J):
     
@@ -100,7 +130,6 @@ def forward_kinematics(J):
 
     return p
 
-
 def inverse_kinematics(p):
     J = np.zeros(6)
     d = [d1, 0.0, 0.0, d4, d5, d6] 
@@ -109,22 +138,30 @@ def inverse_kinematics(p):
     alpha = [pi/2, 0.0, 0.0, pi/2, pi/2, 0.0]
     
     px, py, pz = p
+
+    "theta1"
+    if py > 0:
+        theta[0] = pi - atan2_check(px, py) - acos(zero_divizion_check(d[3],sqrt(px*px + py*py)))
+    else:
+        theta[0] = pi/2 + atan2_check(py, px) - acos(zero_divizion_check(d[3],sqrt(px*px + py*py)))
     
     "極座標変換"
     X = (px - cos(theta[0])*d[4] - sin(theta[0])*d[3])/cos(theta[0])
     Z = pz - d[0] + d[5]
+
     r = sqrt_check(X*X + Z*Z)
+    r_alpha = atan2_check(Z, X)
     
-    "theta1"
-    if py > 0:
-        theta[0] = pi - atan2_check(px, py) - acos(d[3]/sqrt(px*px + py*py))
-    else:
-        theta[0] = pi/2 + atan2_check(py, px) - acos(d[3]/sqrt(px*px + py*py))
+    h = sqrt_check(l[1]*l[1] + l[2]*l[2] + 2*l[1]*l[2]*cos(theta[1]))
+    h_beta = atan2_check(l[2]*sin(theta[1]), l[1] + l[2]*cos(theta[1]))
+    
         
-    "theta3"    
+    "theta3"
+    print("sqrt",(r*r+l[1]*l[1]+l[2]*l[2])**2 - 2*(r**4 + l[1]**4 + l[2]**4))
+    
     theta[2] = -atan2_check(sqrt_check((r*r+l[1]*l[1]+l[2]*l[2])**2 - 2*(r**4 + l[1]**4 + l[2]**4)), r*r-l[1]*l[1]-l[2]*l[2])
     
-    "theta2"
+    
     theta[1] = atan2_check(Z, X) - atan2_check(l[2]*sin(theta[2]), l[1] + l[2]*cos(theta[2]))
     
     "theta4"

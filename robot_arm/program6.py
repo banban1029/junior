@@ -55,8 +55,12 @@ def main():
             J = inverse_kinematics(p)
             p_achieved = forward_kinematics(J)
             
-            for i in range(3):                  # 6つの角度値を表示
-                print(f"p_achieved{i+1}: {p_achieved[i]}")
+            z_check(p_achieved)
+            
+            error = np.fabs(p_sets[key-1] - p_achieved)
+                
+            for i in range(3):  # 6つの角度値を表示
+                print(f"p{i+1}: {p_achieved[i]}, error: {error[i]}")
             print()
             
             moveto(J=J, marker_pos = p)
@@ -67,6 +71,15 @@ def main():
 
 
 # ----- 学生定義のサブ関数（実験内容に応じてここに関数を追加する） ----- #
+
+class Z_ERROR(Exception):
+    pass
+
+def z_check(p):
+    if p[2] < 15.0:
+        raise Z_ERROR('pz < 15.0 error')
+    else:
+        return True
 
 def change_to_theta(J):
     theta = np.array([
@@ -127,6 +140,7 @@ def inverse_kinematics(p):
         theta[0] = pi - atan2(px, py) - acos(d[3]/sqrt(px*px + py*py))
     else:
         theta[0] = pi/2 + atan2(py, px) - acos(d[3]/sqrt(px*px + py*py))
+        
         
     "極座標変換"
     X = (px - cos(theta[0])*d[4] - sin(theta[0])*d[3])/cos(theta[0])

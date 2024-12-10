@@ -1,9 +1,3 @@
-# https://note.com/npaka/n/n7f2dd658af7f
-
-# https://github.com/elephantrobotics/pymycobot/tree/main/pymycobot
-
-# 例えば通常待機時：緑，プログラム実行中：青，エラー発生時：赤など．
-
 import time
 from math import radians,degrees,sin,cos,atan2,sqrt,pi,acos
 import traceback
@@ -16,48 +10,64 @@ print("* 1 -> simulation")
 print("* 2 -> move mode")
 move_mode = int(input())
 
-status = ["green", "blue", "red"]
 
 # ----- メイン関数 ----- #
 def main():
 
     print("start program")
-    
-    
-    # status[0]
+    time.sleep(1.0)
+    mycobot.set_color(0, 0, 255) # green color
+    time.sleep(2.0)
 
     try:    # try内で何らかのエラーが発生 -> 処理中断してexceptに移動
 
         # --- メインループ （実験内容に応じてここを変更）--- #
-        while True:
 
-            J = np.zeros(6)  # 角度値の初期化（単位：degree）
-                       
-            p_sets = np.array([
-                [150, -100, 70],  # p_object
-                [150, 100, 70]    # p_target
-            ]) 
-
-            for p in p_sets:
-                J = inverse_kinematics(p)
-                moveto(J=J, marker_pos=p)      
+        J = np.zeros(6)  # 角度値の初期化（単位：degree）
+                   
+        p_sets = np.array([
+            [150, -100, 40],
+            [150, -100, 150],
+            [150, 100, 150],  
+            [150, 100, 40],
+            [1000, 1000, 100],
+        ]) 
+        
+        for p in p_sets:
+            J = inverse_kinematics(p)
+            p_achieved = forward_kinematics(J)
+            z_check(p_achieved)
+            
+            error = np.fabs(p - p_achieved)
+            
+            for i in range(3):  # 6つの角度値を表示
+                print(f"p{i+1}: {p_achieved[i]}, error: {error[i]}")
+            print()
+            
+            moveto(J=J, marker_pos=p)
+        
+        mycobot.set_color(0, 255, 0) # green color
+        time.sleep(2.0)
                 
     except:
-        # status[2]
         traceback.print_exc()                   # try内で発生したエラーを表示
+        mycobot.set_color(0, 255, 0) # green color
+        time.sleep(2.0)
 # -------------------- #
-
 
 # ----- 学生定義のサブ関数（実験内容に応じてここに関数を追加する） ----- #
 
-def safe_moveto(J, marker_pos):
-    
-    # status[1]
-    
-    moveto(J, marker_pos)
-    
-    # status[0]
-    
+
+class Z_ERROR(Exception):
+    pass
+
+def z_check(p):
+    if p[2] < 15.0:
+        mycobot.set_color(255, 0, 0) # error color
+        time.sleep(2.0)
+        raise Z_ERROR('pz < 15.0 error')
+    else:
+        return True
 
 def change_to_theta(J):
     theta = np.array([
@@ -88,15 +98,23 @@ class sqrtError(Exception):
     pass
 
 def atan2_check(y,x):
-    if x <= 0.001 and x >= -0.001:
-        raise atan2Error('atan2 error')
+    # if x < 0.001 and x > -0.001:
+    #     raise atan2Error('atan2 error')
     return atan2(y,x)
 
 def sqrt_check(x):
     if x < 0:
+        mycobot.set_color(255, 0, 0) # error color
+        time.sleep(2.0)
         raise sqrtError('sqrt error')
     return sqrt(x)
 
+def zero_divizion_check(y,x):
+    if x < 0.001 and x > -0.001:
+        mycobot.set_color(255, 0, 0) # error color
+        time.sleep(2.0)
+        raise ZeroDivisionError('ZeroDivisionError')
+    return y/x
 
 def forward_kinematics(J):
     
@@ -122,16 +140,19 @@ def forward_kinematics(J):
     return p
 
 def inverse_kinematics(p):
-    d = [d1, 0, 0, d4, d5, d6]    
-    l = [0, a2, a3, 0, 0, 0]
-    alpha = [pi/2, 0, 0, pi/2, pi/2, 0]
+    J = np.zeros(6)
+    d = [d1, 0.0, 0.0, d4, d5, d6] 
+    theta = np.zeros(6)   
+    l = [0.0, a2, a3, 0.0, 0.0, 0.0]
+    alpha = [pi/2, 0.0, 0.0, pi/2, pi/2, 0.0]
     
-    J = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-    theta = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-    
-    px = p[0]
-    py = p[1]
-    pz = p[2]
+    px, py, pz = p
+
+    "theta1"
+    if py > 0:
+        theta[0] = pi - atan2_check(px, py) - acos(zero_divizion_check(d[3],sqrt(px*px + py*py)))
+    else:
+        theta[0] = pi/2 + atan2_check(py, px) - acos(zero_divizion_check(d[3],sqrt(px*px + py*py)))
     
     "極座標変換"
     X = (px - cos(theta[0])*d[4] - sin(theta[0])*d[3])/cos(theta[0])
@@ -143,13 +164,6 @@ def inverse_kinematics(p):
     h = sqrt_check(l[1]*l[1] + l[2]*l[2] + 2*l[1]*l[2]*cos(theta[1]))
     h_beta = atan2_check(l[2]*sin(theta[1]), l[1] + l[2]*cos(theta[1]))
     
-    
-    "theta1"
-    if py > 0:
-        theta[0] = pi - atan2_check(px, py) - acos(d[3]/sqrt(px*px + py*py))
-    else:
-        theta[0] = pi/2 + atan2_check(py, px) - acos(d[3]/sqrt(px*px + py*py))
-        
         
     "theta3"
     print("sqrt",(r*r+l[1]*l[1]+l[2]*l[2])**2 - 2*(r**4 + l[1]**4 + l[2]**4))
@@ -167,6 +181,9 @@ def inverse_kinematics(p):
     
     "theta6"
     theta[5] = theta[0]
+    
+    for i in range(6):                  # 6つの角度値を表示
+        print("theta"+str(i+1)+": ",theta[i])
     
     J = change_to_J(theta)
     
