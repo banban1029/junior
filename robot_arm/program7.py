@@ -24,14 +24,9 @@ def main():
             p = np.zeros(3) # 位置の初期化（単位：mm）
             
             p_sets = np.array([
-                [0, 0, 100],
-                [1000, 1000, 100],
                 [150, -100, 70],
-                [150, 100, 70],
-                [150, -50, 30],
-                [150, -50, 100],
-                [150, 50, 100],  
-                [150, 50, 30]    
+                [0, 0, 100],
+                [1000, 1000, 100]
             ])
 
            
@@ -116,7 +111,7 @@ def sqrt_check(x):
 
 def zero_divizion_check(y,x):
     if x < 0.001 and x > -0.001:
-        raise ZeroDivisionError('ZeroDivisionError')
+        raise ZeroDivisionError('ZeroDivision Error')
     return y/x
 
 def forward_kinematics(J):
